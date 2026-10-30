@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+.pytest_cache/
+*.py[cod]
+
+# Datos locales: conservar sólo los ficheros de ejemplo o README.
+data/raw/*
+!data/raw/README.md
+data/processed/*
+!data/processed/README.md
