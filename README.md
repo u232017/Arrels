@@ -8,6 +8,20 @@ El proyecto se desarrolla para el **Open Data Challenge de Càtedres Telefónica
 
 Este repositorio contiene la base de preparación de datos. El dataset todavía no está incluido. Cuando esté disponible, guardad una copia original en `data/raw/` y ejecutad el limpiador.
 
+## Notebooks de prueba
+
+Los notebooks esperan los CSV originales en `data/raw/` y no modifican esos ficheros:
+
+- `notebooks/01_exploracion_movilidad.ipynb`: validación y exploración de M1, M2 y M3.
+- `notebooks/02_exploracion_turismo.ipynb`: validación y exploración de T1 a T9.
+
+Para ejecutarlos, instalad `pandas`, `matplotlib` y Jupyter en el entorno de trabajo:
+
+```bash
+python -m pip install pandas matplotlib jupyter
+jupyter notebook
+```
+
 ## Estructura
 
 ```text
@@ -15,6 +29,7 @@ Este repositorio contiene la base de preparación de datos. El dataset todavía 
 ├── data/
 │   ├── raw/          # Datos originales, no modificados
 │   └── processed/    # Datos listos para la visualización
+├── notebooks/        # Exploraciones reproducibles de movilidad y turismo
 ├── src/arrels/
 │   └── clean_data.py # Limpieza y normalización reproducible
 ├── tests/
