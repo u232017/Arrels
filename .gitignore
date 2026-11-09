@@ -8,3 +8,12 @@ data/raw/*
 !data/raw/README.md
 data/processed/*
 !data/processed/README.md
+
+# NDA: raw and row-level data never enter Git
+data/
+!data/raw/README.md
+!data/processed/README.md
+*.csv
+*.parquet
+*.xlsx
+.env
