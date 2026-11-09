@@ -125,6 +125,6 @@ Las cifras de enlace (97,3 %, 100 %, 95,33 %) del enunciado no se han podido ver
 ## 5. Preguntas abiertas
 
 1. ¿Dónde están los ficheros de alquiler, población y HUT validados por el equipo?
-2. R5: ¿"≥80 % de días con datos" = días con fila (incluye `0`) o días con valor publicado (≥15)?
+2. ~~R5: definición de cobertura~~ → **Resuelto (D1):** días con fila, incluidas las suprimidas.
 3. ¿Marcamos como `partial` los días adyacentes a los huecos (2025-04-12, 2025-05-19, 2025-05-21)?
 4. Tabla 9: ¿mostramos `NA` como "residència desconeguda" o la excluimos del mapa?
