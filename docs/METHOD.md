@@ -10,6 +10,7 @@
 | Telefónica movilidad (Tabla 3) | Viajes diarios por origen y destino | 2023-01-01 → 2025-08-31 (diaria) | ✅ |
 | Telefónica turismo, Tabla 9 | Visitantes regionales únicos por barri, mes y municipio de residencia | 2023-01 → 2025-08 (mensual) | ✅ |
 | Festivos ES / CAT / BCN | Marcas diarias y mensuales | 2023 → 2025 | ✅ (fechas por verificar, T6) |
+| Capitales de municipio georreferenciadas (Generalitat, ICGC) | Punto de cada municipio en el mapa | — | ✅ `pipeline/reference/municipality_centroids.csv` |
 | Alquiler por barri y trimestre | Contexto | 2023T1 → 2025T2 | ⏳ fichero pendiente |
 | Población por barri y mes | Contexto | 2023-01 → 2025-08 | ⏳ fichero pendiente |
 | HUT (viviendas de uso turístico) | Contexto | solo 2025T2 | ⏳ fichero pendiente |
