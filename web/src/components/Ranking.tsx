@@ -19,7 +19,7 @@ export function Ranking({ homes }: { homes: PeriodHome[] }) {
             <span className="text-caption tabular-nums text-text-2">{i + 1}</span>
             <div className="min-w-0">
               <div className="flex items-baseline justify-between gap-2">
-                <span className="truncate text-navy" title={h.name}>{h.name}</span>
+                <span className="break-words text-navy">{h.name}</span>
                 <span className="shrink-0 tabular-nums text-text-2">{formatInt(h.visitors)}</span>
               </div>
               <div className="mt-0.5 h-1.5 rounded-full bg-surface">

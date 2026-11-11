@@ -27,6 +27,8 @@ class FakeMap {
   getSource(id: string) { return this.sources[id]; }
   addLayer(l: { id: string; type: string }) { this.layers.push(l); }
   remove() { this.removed = true; }
+  fitted: { bounds: unknown; options: Record<string, unknown> } | undefined;
+  fitBounds(bounds: unknown, options: Record<string, unknown>) { this.fitted = { bounds, options }; }
 }
 class FakeMarker {
   lngLat: unknown;
@@ -104,6 +106,25 @@ describe("HomesMap", () => {
     const pin = await screen.findByText("Sants");
     expect(pin.closest("[data-testid='barri-pin']")).not.toBeNull();
     expect(markers[0].lngLat).toEqual([2.136, 41.377]);
+  });
+
+  it("fits the view to the main towns and the selected barri, without animation", async () => {
+    const { map } = await mounted();
+    map.emit("load");
+    await waitFor(() => expect(map.fitted).toBeDefined());
+    expect(map.fitted?.bounds).toEqual([[2.1, 41.377], [2.136, 41.5]]);
+    expect(map.fitted?.options.animate).toBe(false);
+  });
+
+  it("collapses the attribution to the 'i' button once loaded", async () => {
+    const { map } = await mounted();
+    const attrib = document.createElement("details");
+    attrib.className = "maplibregl-ctrl-attrib maplibregl-compact-show";
+    attrib.open = true;
+    screen.getByRole("img", { name: /mapa dels municipis/i }).append(attrib);
+    map.emit("load");
+    expect(attrib.open).toBe(false);
+    expect(attrib.classList.contains("maplibregl-compact-show")).toBe(false);
   });
 
   it("shows a size legend", async () => {

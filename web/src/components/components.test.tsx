@@ -157,3 +157,16 @@ describe("Footer", () => {
     expect(footer).toHaveTextContent("Open Data BCN");
   });
 });
+
+describe("niceTicks", () => {
+  it("gives 5 round ticks from 0 that cover the maximum", async () => {
+    const { niceTicks } = await import("./EvolutionChart");
+    expect(niceTicks(645640)).toEqual([0, 200000, 400000, 600000, 800000]);
+    expect(niceTicks(286157)).toEqual([0, 100000, 200000, 300000, 400000]);
+    expect(niceTicks(1200)).toEqual([0, 500, 1000, 1500, 2000]);
+  });
+  it("holiday bands reach the top tick", () => {
+    const rows = chartRows(series, "2024-01", "2024-02", "2023");
+    expect(rows[0].holiday).toBe(200);
+  });
+});

@@ -17,6 +17,17 @@ export interface ChartRow {
   holidays: string[];
 }
 
+const STEPS = [1, 2, 2.5, 5, 10];
+const TICKS = 4; // intervals -> 5 ticks including 0
+
+/** 5 round y ticks from 0 (steps of 1, 2, 2.5 or 5 × 10^k) whose top covers `max`. */
+export function niceTicks(max: number): number[] {
+  const raw = Math.max(max, 1) / TICKS;
+  const mag = 10 ** Math.floor(Math.log10(raw));
+  const step = (STEPS.find((s) => s * mag >= raw) ?? 10) * mag;
+  return Array.from({ length: TICKS + 1 }, (_, i) => i * step);
+}
+
 const published = (m: BarriMonth | undefined) =>
   m && m.visitors.state === "published" ? m.visitors.value : null;
 
@@ -29,8 +40,8 @@ export function chartRows(all: BarriMonth[], from: string, to: string, baseYear:
     base: published(base.get(m.month.slice(5))),
     holidays: m.holidays,
   }));
-  const top = Math.max(1, ...rows.flatMap((r) => [r.visitors ?? 0, r.base ?? 0]));
-  return rows.map((r) => ({ ...r, holiday: r.holidays.length ? top * 1.05 : null }));
+  const top = niceTicks(Math.max(1, ...rows.flatMap((r) => [r.visitors ?? 0, r.base ?? 0]))).at(-1) ?? 1;
+  return rows.map((r) => ({ ...r, holiday: r.holidays.length ? top : null }));
 }
 
 function ChartTooltip({ active, payload, baseYear }: { active?: boolean; payload?: { payload: ChartRow }[]; baseYear: string }) {
@@ -48,8 +59,8 @@ function ChartTooltip({ active, payload, baseYear }: { active?: boolean; payload
 
 export function EvolutionChart({ all, from, to, baseYear }: { all: BarriMonth[]; from: string; to: string; baseYear: string }) {
   const narrow = useMediaQuery("(max-width: 640px)");
-  const reduced = useMediaQuery("(prefers-reduced-motion: reduce)");
   const rows = chartRows(all, from, to, baseYear);
+  const ticks = niceTicks(Math.max(1, ...rows.flatMap((r) => [r.visitors ?? 0, r.base ?? 0])));
   const height = narrow ? 260 : 320;
   return (
     <figure className="m-0">
@@ -65,13 +76,13 @@ export function EvolutionChart({ all, from, to, baseYear }: { all: BarriMonth[];
             <XAxis dataKey="month" tickFormatter={formatMonthShort} tick={{ fill: TEXT_2, fontSize: 12 }}
                    tickLine={false} axisLine={{ stroke: GRID }} interval="preserveStartEnd" minTickGap={8} />
             <YAxis tickFormatter={formatCompact} tick={{ fill: TEXT_2, fontSize: 12 }} tickLine={false}
-                   axisLine={false} tickCount={5} width={64} domain={[0, "auto"]} />
+                   axisLine={false} ticks={ticks} width={64} domain={[0, ticks[ticks.length - 1]]} />
             <Tooltip content={<ChartTooltip baseYear={baseYear} />} cursor={{ stroke: "#0f1f38", strokeOpacity: 0.3 }} />
             <Bar dataKey="holiday" fill={HOLIDAY} isAnimationActive={false} />
             <Line type="monotone" dataKey="base" stroke={REF} strokeWidth={2} strokeDasharray="6 4" dot={false}
-                  connectNulls={false} isAnimationActive={!reduced} />
+                  connectNulls={false} isAnimationActive={false} />
             <Line type="monotone" dataKey="visitors" stroke={TEAL} strokeWidth={2} dot={false}
-                  activeDot={{ r: 4 }} connectNulls={false} isAnimationActive={!reduced} />
+                  activeDot={{ r: 4 }} connectNulls={false} isAnimationActive={false} />
           </ComposedChart>
         </ResponsiveContainer>
       </div>

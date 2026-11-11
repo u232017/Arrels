@@ -12,6 +12,18 @@ const ZOOM = 8;
 const MAX_RADIUS_PX = 24;
 const LABELLED = 8;
 const RAMP: [string, string] = ["#d5eeef", "#0b6e73"];
+const FIT_TOWNS = 12; // the view frames the main home towns and the selected barri
+const FIT_PADDING = 48;
+
+/** [[west, south], [east, north]] around the first towns and the pilot barri. */
+function viewBounds(points: Located[], pilot?: Pilot): [[number, number], [number, number]] | null {
+  const pts: [number, number][] = points.slice(0, FIT_TOWNS).map((p) => [p.lon, p.lat]);
+  if (pilot?.lat !== undefined && pilot.lon !== undefined) pts.push([pilot.lon, pilot.lat]);
+  if (pts.length === 0) return null;
+  const lons = pts.map((p) => p[0]);
+  const lats = pts.map((p) => p[1]);
+  return [[Math.min(...lons), Math.min(...lats)], [Math.max(...lons), Math.max(...lats)]];
+}
 
 type Located = PeriodHome & { lat: number; lon: number };
 const located = (homes: PeriodHome[]): Located[] =>
@@ -84,20 +96,22 @@ export function HomesMap({ homes, pilot }: { homes: PeriodHome[]; pilot?: Pilot 
             popup.setLngLat(e.lngLat).setText(String(f.properties?.tip ?? "")).addTo(m);
           });
           m.on("mouseleave", "homes", () => { m.getCanvas().style.cursor = ""; popup.remove(); });
+          const attrib = ref.current?.querySelector<HTMLDetailsElement>(".maplibregl-ctrl-attrib");
+          if (attrib) { attrib.open = false; attrib.classList.remove("maplibregl-compact-show"); } // collapsed "i"
           setReady(true);
         });
         m.on("error", () => { if (!loaded) setFailed(true); }); // ignore single tile errors
         if (pilot?.lat !== undefined && pilot.lon !== undefined) {
           const el = document.createElement("div");
-          el.className = "flex items-center gap-1.5 pointer-events-none";
+          el.className = "pointer-events-none flex flex-col items-center gap-1";
           const dot = document.createElement("span");
           dot.className = "block size-3.5 rounded-full border-2 border-white bg-navy shadow";
           const label = document.createElement("span");
           label.className = "rounded bg-navy px-1.5 py-0.5 text-caption font-semibold text-white";
           label.textContent = pilot.name;
-          el.append(dot, label);
+          el.append(label, dot); // label above the dot so it is never cut at the map edge
           el.dataset.testid = "barri-pin";
-          marker = new Marker({ element: el, anchor: "left", offset: [-7, 0] }).setLngLat([pilot.lon, pilot.lat]).addTo(m);
+          marker = new Marker({ element: el, anchor: "bottom", offset: [0, 7] }).setLngLat([pilot.lon, pilot.lat]).addTo(m);
         }
       })
       .catch(() => setFailed(true));
@@ -109,7 +123,9 @@ export function HomesMap({ homes, pilot }: { homes: PeriodHome[]; pilot?: Pilot 
     if (!m || !ready) return;
     const src = m.getSource("homes") as { setData?: (d: unknown) => void } | undefined;
     src?.setData?.(data);
-  }, [data, ready]);
+    const bounds = viewBounds(points, pilot);
+    if (bounds) m.fitBounds(bounds, { padding: FIT_PADDING, animate: false, maxZoom: 12 });
+  }, [data, ready, points, pilot]);
 
   if (failed) {
     return <p className="m-0 rounded-card bg-surface p-4 text-body text-text-2">Mapa no disponible en aquest navegador. Consulta la llista.</p>;
@@ -119,10 +135,11 @@ export function HomesMap({ homes, pilot }: { homes: PeriodHome[]; pilot?: Pilot 
   }
   const legend = [max, max / 4, max / 16].map((v) => Math.round(v / 100) * 100).filter((v) => v > 0);
   return (
-    <div className="relative h-full min-h-[320px] lg:min-h-[480px]">
-      <div ref={ref} className="absolute inset-0 overflow-hidden rounded-card border border-line" role="img"
+    <div className="relative lg:h-full">
+      {/* maplibre-gl.css sets position:relative on the map element, so size it with min-height */}
+      <div ref={ref} className="h-[320px] w-full overflow-hidden rounded-card border border-line lg:h-full lg:min-h-[480px]" role="img"
            aria-label="Mapa dels municipis de residència dels visitants (mida = visitants). Vegeu la llista al costat." />
-      <div className="pointer-events-none absolute bottom-2 left-2 rounded-lg border border-line bg-white/95 px-2 py-1.5 text-caption text-text-2">
+      <div className="pointer-events-none mt-2 inline-block rounded-lg border border-line bg-white/95 px-2 py-1.5 text-caption text-text-2 lg:absolute lg:bottom-2 lg:left-2 lg:mt-0">
         <p className="m-0 mb-1">Visitants al mes</p>
         <div className="flex items-end gap-3">
           {legend.map((v) => {

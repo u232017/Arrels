@@ -16,7 +16,7 @@ interface Props {
 export function TopBar({ meta, code, onCode, months, range, onRange }: Props) {
   const monthOptions = months.map((m) => ({ value: m, label: formatMonth(m) }));
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-white/95 backdrop-blur">
+    <header className="z-40 border-b border-line bg-white/95 backdrop-blur lg:sticky lg:top-0">
       <div className="mx-auto flex max-w-[1280px] flex-col gap-4 px-4 py-3 lg:flex-row lg:items-end lg:justify-between lg:px-8">
         <div>
           <p className="m-0 text-section font-semibold text-navy">Arrels</p>
