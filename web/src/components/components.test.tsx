@@ -1,122 +1,159 @@
+import type { ReactNode } from "react";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { BarriSelector } from "./BarriSelector";
-import { CoverageBadge } from "./CoverageBadge";
-import { HomesList } from "./HomesList";
-import { HomesMap } from "./HomesMap";
+import { choose } from "../test-utils";
+import type { PeriodHome } from "../homes";
+import type { Badge, BarriMonth, Meta, Value } from "../types";
+import { TooltipProvider } from "./ui/tooltip";
+import { DataTable } from "./DataTable";
+import { chartRows, EvolutionChart } from "./EvolutionChart";
+import { Footer } from "./Footer";
 import { KpiCard } from "./KpiCard";
 import { MethodSection } from "./MethodSection";
-import { MonthRange } from "./MonthRange";
-import { TimeSeries } from "./TimeSeries";
-import type { BarriMonth, Meta, Value } from "../types";
+import { Ranking } from "./Ranking";
+import { StatusDot } from "./StatusDot";
+import { TopBar } from "./TopBar";
 
-const badge = { window: "2024-02", pct_published: 50, pct_suppressed: 30, pct_absent: 20, n_routes: 12 };
-const pub = (value: number): Value => ({ value, state: "published", badge });
-const absent: Value = { value: null, state: "absent", badge: { ...badge, pct_published: 0, pct_absent: 100 } };
+const badge: Badge = { window: "2024-02", pct_published: 50, pct_suppressed: 30, pct_absent: 20, n_routes: 12 };
+const full: Badge = { window: "2024-02", pct_published: 100, pct_suppressed: 0, pct_absent: 0 };
+const pub = (value: number, b: Badge = badge): Value => ({ value, state: "published", badge: b });
+const withTips = (ui: ReactNode) => render(<TooltipProvider>{ui}</TooltipProvider>);
 
-describe("CoverageBadge", () => {
-  it("shows window and the three states", () => {
-    render(<CoverageBadge value={pub(1)} />);
-    const el = screen.getByTestId("coverage-badge");
-    expect(el).toHaveTextContent("2024-02");
-    expect(el).toHaveTextContent("50 % publicat");
-    expect(el).toHaveTextContent("30 % <15");
-    expect(el).toHaveTextContent("20 % sense fila");
-    expect(el).toHaveTextContent("12 rutes");
+const meta: Meta = {
+  generated: "x", window: { start: "2023-01", end: "2025-08" }, threshold: 15,
+  pilots: [{ code: "1", name: "A" }, { code: "2", name: "B" }],
+  missing_days: ["2024-02-11"], partial_days: ["2025-04-12"],
+};
+
+describe("StatusDot", () => {
+  it("shows a short label, not the long coverage line", () => {
+    withTips(<StatusDot value={pub(1)} />);
+    const dot = screen.getByTestId("coverage-badge");
+    expect(dot).toHaveTextContent("Parcialment <15");
+    expect(dot).not.toHaveTextContent("Finestra");
+  });
+  it("reveals the full details in a tooltip on keyboard focus", async () => {
+    withTips(<StatusDot value={pub(1)} />);
+    await userEvent.tab();
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Finestra 2024-02 · 50 % publicat · 30 % <15 · 20 % sense fila · 12 rutes");
   });
 });
 
 describe("KpiCard", () => {
-  it("shows the formatted value and its badge", () => {
-    render(<KpiCard title="Visitants" value={pub(472794)} format="int" />);
-    expect(screen.getByRole("article", { name: "Visitants" })).toHaveTextContent("472.794");
-    expect(screen.getByTestId("coverage-badge")).toBeInTheDocument();
+  it("shows label, Catalan-formatted value, context and status", () => {
+    withTips(<KpiCard title="Visitants regionals" value={pub(471527, full)} format="int" note="Mitjana" />);
+    const card = screen.getByRole("article", { name: "Visitants regionals" });
+    expect(card).toHaveTextContent("471.527");
+    expect(card).toHaveTextContent("Mitjana");
+    expect(within(card).getByTestId("coverage-badge")).toHaveTextContent("Publicat");
   });
-  it("shows 'Sense dada' instead of a number when absent", () => {
-    render(<KpiCard title="Lloguer" value={absent} format="int" />);
-    expect(screen.getByRole("article", { name: "Lloguer" })).toHaveTextContent("Sense dada");
-  });
-});
-
-describe("BarriSelector", () => {
-  it("is labelled and reports the chosen barri", async () => {
-    const onChange = vi.fn();
-    render(<BarriSelector pilots={[{ code: "1", name: "A" }, { code: "2", name: "B" }]} value="1" onChange={onChange} />);
-    await userEvent.selectOptions(screen.getByLabelText("Barri"), "2");
-    expect(onChange).toHaveBeenCalledWith("2");
+  it("formats shares and signed changes", () => {
+    withTips(<><KpiCard title="Q" value={pub(0.178, full)} format="pct" /><KpiCard title="C" value={pub(-0.028, full)} format="signedPct" /></>);
+    expect(screen.getByRole("article", { name: "Q" })).toHaveTextContent("17,8 %");
+    expect(screen.getByRole("article", { name: "C" })).toHaveTextContent("−2,8 %");
   });
 });
 
-describe("MonthRange", () => {
+describe("TopBar", () => {
   const months = ["2024-01", "2024-02", "2024-03"];
-  it("has labelled from/to selects", () => {
-    render(<MonthRange months={months} from="2024-01" to="2024-03" onChange={() => {}} />);
-    expect(screen.getByLabelText("Des de")).toHaveValue("2024-01");
-    expect(screen.getByLabelText("Fins a")).toHaveValue("2024-03");
+  it("has three labelled selects in one group", () => {
+    withTips(<TopBar meta={meta} code="1" onCode={() => {}} months={months} range={{ from: "2024-01", to: "2024-03" }} onRange={() => {}} />);
+    const group = screen.getByRole("group", { name: "Filtres" });
+    expect(within(group).getAllByRole("combobox")).toHaveLength(3);
+    expect(screen.getByRole("combobox", { name: "Des de" })).toHaveTextContent("gener 2024");
   });
-  it("never lets 'from' go past 'to'", async () => {
-    const onChange = vi.fn();
-    render(<MonthRange months={months} from="2024-01" to="2024-02" onChange={onChange} />);
-    await userEvent.selectOptions(screen.getByLabelText("Des de"), "2024-03");
-    expect(onChange).toHaveBeenCalledWith("2024-03", "2024-03");
+  it("reports the chosen barri", async () => {
+    const onCode = vi.fn();
+    withTips(<TopBar meta={meta} code="1" onCode={onCode} months={months} range={{ from: "2024-01", to: "2024-03" }} onRange={() => {}} />);
+    await choose("Barri", "B");
+    expect(onCode).toHaveBeenCalledWith("2");
   });
-});
-
-const homes = [
-  { code: "08187", name: "Sabadell", visitors: 100, lat: 41.5, lon: 2.1 },
-  { code: "ALTRES", name: "Altres municipis", visitors: 40, lat: null, lon: null },
-];
-
-describe("HomesList", () => {
-  it("ranks home towns with visitors", () => {
-    render(<HomesList homes={homes} />);
-    const items = within(screen.getByRole("list", { name: /municipis de residència/i })).getAllByRole("listitem");
-    expect(items[0]).toHaveTextContent("Sabadell");
-    expect(items[0]).toHaveTextContent("100");
+  it("never lets 'Des de' go past 'Fins a'", async () => {
+    const onRange = vi.fn();
+    withTips(<TopBar meta={meta} code="1" onCode={() => {}} months={months} range={{ from: "2024-01", to: "2024-02" }} onRange={onRange} />);
+    await choose("Des de", "març 2024");
+    expect(onRange).toHaveBeenCalledWith({ from: "2024-03", to: "2024-03" });
   });
 });
 
-describe("HomesMap", () => {
-  it("falls back to a message when no home town has coordinates", () => {
-    render(<HomesMap homes={[homes[1]]} />);
-    expect(screen.getByText(/mapa no disponible/i)).toBeInTheDocument();
-  });
-});
-
-const series: BarriMonth[] = ["2023-01", "2023-02", "2024-01", "2024-02"].map((m, i) => ({
-  month: m, visitors: pub(100 + i * 10), yoy: pub(0.1), weekend_share: pub(0.2),
-  holidays: m === "2024-01" ? ["Cap d'Any", "Reis"] : [],
+const homes: PeriodHome[] = Array.from({ length: 12 }, (_, i) => ({
+  code: `0810${i}`, name: `Municipi ${i + 1}`, visitors: 1200 - i * 100, share: (1200 - i * 100) / 10000,
+  lat: 41.4, lon: 2.1, monthsPublished: i === 1 ? 10 : 12, monthsTotal: 12,
 }));
 
-describe("TimeSeries", () => {
-  it("is an accessible image with a data table fallback", () => {
-    render(<TimeSeries months={series} from="2024-01" to="2024-02" />);
-    expect(screen.getByRole("img", { name: /visitants regionals/i })).toBeInTheDocument();
-    expect(screen.getByRole("table")).toBeInTheDocument();
+describe("Ranking", () => {
+  it("shows the top 10 with share of the total", () => {
+    withTips(<Ranking homes={homes} />);
+    const items = within(screen.getByRole("list", { name: /municipis de residència/i })).getAllByRole("listitem");
+    expect(items).toHaveLength(10);
+    expect(items[0]).toHaveTextContent("Municipi 1");
+    expect(items[0]).toHaveTextContent("1.200");
+    expect(items[0]).toHaveTextContent("12,0 %");
   });
-  it("marks months with holidays", () => {
-    render(<TimeSeries months={series} from="2024-01" to="2024-02" />);
-    expect(screen.getAllByTestId("holiday-marker")).toHaveLength(1);
+  it("expands to every town with 'Veure tots (N)'", async () => {
+    withTips(<Ranking homes={homes} />);
+    await userEvent.click(screen.getByRole("button", { name: "Veure tots (12)" }));
+    expect(within(screen.getByRole("list")).getAllByRole("listitem")).toHaveLength(12);
+    expect(screen.getByRole("button", { name: "Mostra'n menys" })).toHaveAttribute("aria-expanded", "true");
   });
-  it("shows the same month of 2023 next to each month", () => {
-    render(<TimeSeries months={series} from="2024-01" to="2024-02" />);
-    const row = screen.getAllByRole("row")[1];
-    expect(row).toHaveTextContent("120"); // 2024-01
-    expect(row).toHaveTextContent("100"); // 2023-01
+  it("marks towns that are not published in every month", () => {
+    withTips(<Ranking homes={homes} />);
+    expect(screen.getByRole("button", { name: "Publicat 10 de 12 mesos" })).toBeInTheDocument();
+  });
+});
+
+const month = (m: string, n: number | null, holidays: string[] = []): BarriMonth => ({
+  month: m, visitors: n === null ? { value: null, state: "absent", badge: { ...full, pct_published: 0, pct_absent: 100 } } : pub(n, full),
+  yoy: pub(0, full), weekend_share: pub(0.18, badge), holidays,
+});
+const series = [month("2023-01", 100), month("2023-02", 90), month("2024-01", 120, ["Cap d'Any", "Reis"]), month("2024-02", null)];
+
+describe("chartRows", () => {
+  const rows = chartRows(series, "2024-01", "2024-02", "2023");
+  it("pairs each month with the same month of the base year", () => {
+    expect(rows.map((r) => [r.month, r.visitors, r.base])).toEqual([["2024-01", 120, 100], ["2024-02", null, 90]]);
+  });
+  it("adds a background band only for months with holidays", () => {
+    expect(rows.map((r) => r.holiday !== null)).toEqual([true, false]);
+  });
+});
+
+describe("EvolutionChart", () => {
+  it("has the legend above the chart and an accessible description", () => {
+    render(<EvolutionChart all={series} from="2024-01" to="2024-02" baseYear="2023" />);
+    expect(screen.getByText("Mateix mes, 2023 (referència)")).toBeInTheDocument();
+    expect(screen.getByText("Mes amb festius")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /visitants regionals per mes/i })).toBeInTheDocument();
+  });
+});
+
+describe("DataTable", () => {
+  it("lists the months with the full coverage details", () => {
+    render(<DataTable months={series.slice(2)} all={series} baseYear="2023" />);
+    const rows = screen.getAllByRole("row");
+    expect(rows[1]).toHaveTextContent("gener 2024");
+    expect(rows[1]).toHaveTextContent("120");
+    expect(rows[1]).toHaveTextContent("Finestra 2024-02 · 100 % publicat");
+    expect(rows[2]).toHaveTextContent("Sense dada");
   });
 });
 
 describe("MethodSection", () => {
-  const meta: Meta = {
-    generated: "x", window: { start: "2023-01", end: "2025-08" }, threshold: 15, pilots: [],
-    missing_days: ["2024-02-11"], partial_days: ["2025-04-12"],
-  };
-  it("explains rules, gaps and that these are patterns, not causes", () => {
+  it("explains R1–R5, the gaps, the province definition and 'patrons, no causes'", () => {
     render(<MethodSection meta={meta} />);
-    const section = screen.getByRole("region", { name: "Mètode i limitacions" });
-    expect(section).toHaveTextContent("2024-02-11");
-    expect(section).toHaveTextContent("2025-04-12");
-    expect(section).toHaveTextContent(/patrons, no causes/i);
-    for (const rule of ["R1", "R2", "R3", "R4", "R5"]) expect(section).toHaveTextContent(rule);
+    const text = document.body.textContent ?? "";
+    for (const s of ["R1", "R2", "R3", "R4", "R5", "2024-02-11", "2025-04-12", "província de Barcelona"]) expect(text).toContain(s);
+    expect(text).toMatch(/patrons, no causes/i);
+    expect(text).not.toMatch(/de Catalunya/);
+  });
+});
+
+describe("Footer", () => {
+  it("names the team, the data window and the sources", () => {
+    render(<Footer meta={meta} />);
+    const footer = screen.getByRole("contentinfo");
+    expect(footer).toHaveTextContent("Barri Lab (201_F, UPF)");
+    expect(footer).toHaveTextContent("2023-01 – 2025-08");
+    expect(footer).toHaveTextContent("Open Data BCN");
   });
 });

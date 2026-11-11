@@ -1,58 +1,103 @@
 import { useMemo } from "react";
-import { formatMonth } from "../format";
+import { periodHomes } from "../homes";
 import { inRange, periodChange, summarise } from "../range";
-import type { Barri, Home } from "../types";
+import { summarySentence } from "../summary";
+import type { Barri, Meta } from "../types";
 import type { Range } from "../useArrelsData";
-import { CoverageBadge } from "./CoverageBadge";
-import { HomesList } from "./HomesList";
+import { DataTable } from "./DataTable";
+import { EvolutionChart } from "./EvolutionChart";
 import { HomesMap } from "./HomesMap";
 import { KpiCard } from "./KpiCard";
-import { TimeSeries } from "./TimeSeries";
+import { MethodSection } from "./MethodSection";
+import { Ranking } from "./Ranking";
+import { StatusDot } from "./StatusDot";
+import { AccordionSection } from "./ui/accordion";
+import { Card } from "./ui/card";
 
-const NO_HOMES: Home[] = [];
+const UNIFORM_WEEKEND = "Si fos uniforme seria 28,6 %";
 
-/** KPIs, residence panel and monthly series for one barri and month range. */
-export function BarriView({ barri, range, baseYear }: { barri: Barri; range: Range; baseYear: string }) {
+interface Props { barri: Barri; meta: Meta; range: Range; baseYear: string }
+
+/** Summary, KPI row, map + ranking, chart, data table and method for one barri and period. */
+export function BarriView({ barri, meta, range, baseYear }: Props) {
   const shown = useMemo(() => inRange(barri.months, range.from, range.to), [barri, range]);
   const summary = useMemo(() => summarise(shown), [shown]);
-  const lastMonth = shown.length ? shown[shown.length - 1] : undefined;
   const change = useMemo(() => periodChange(barri.months, range.from, range.to), [barri, range]);
-  const context = [
-    { title: "Lloguer mitjà trimestral", value: barri.context.rent },
-    { title: "Residents", value: barri.context.residents },
-    { title: "HUT per 1.000 residents (2025T2)", value: barri.context.hut_per_1000 },
-  ].filter((c) => c.value.state !== "absent"); // never show an empty card
-  const homes = lastMonth?.homes ?? NO_HOMES;
+  const homes = useMemo(() => periodHomes(shown), [shown]);
+  const pilot = useMemo(() => meta.pilots.find((p) => p.code === barri.code), [meta, barri]);
+  const single = range.from === range.to;
+  const noData = summary.visitors.state === "absent";
+
+  const cards = [
+    <KpiCard key="v" title="Visitants regionals" value={summary.visitors} format="int"
+             note={single ? "Visitants únics del mes" : "Mitjana mensual de visitants únics"} />,
+    change.state !== "absent"
+      ? <KpiCard key="c" title="Canvi vs any anterior" value={change} format="signedPct" note="vs mateixos mesos de l'any anterior" />
+      : null,
+    summary.weekendShare.state !== "absent"
+      ? <KpiCard key="w" title="Quota de cap de setmana" value={summary.weekendShare} format="pct" note={UNIFORM_WEEKEND} />
+      : null,
+    barri.context.rent.state !== "absent"
+      ? <KpiCard key="r" title="Lloguer €/m²" value={barri.context.rent} format="euro" note="Lloguer contractual, trimestral" />
+      : null,
+  ].filter(Boolean);
 
   return (
-    <>
-      <h2 className="barri-name">{barri.name}</h2>
-
-      <section className="kpis" aria-labelledby="kpis-title">
-        <h2 id="kpis-title" className="visually-hidden">Indicadors</h2>
-        <KpiCard title="Visitants regionals únics" value={summary.visitors} format="int" note="Mitjana mensual del període" />
-        {change.state !== "absent" ? (
-          <KpiCard title="Canvi vs any anterior" value={change} format="signedPct" note="vs mateixos mesos de l'any anterior" />
-        ) : null}
-        <KpiCard title="Quota de cap de setmana" value={summary.weekendShare} format="pct" note="Viatges regionals; setmana uniforme = 28,6 %" />
-        {context.map((c) => <KpiCard key={c.title} title={c.title} value={c.value} format="int" />)}
+    <div className="flex flex-col gap-6">
+      <section aria-labelledby="barri-title" className="flex flex-col gap-2">
+        <h2 id="barri-title" className="m-0 text-title font-semibold text-navy">{barri.name}</h2>
+        <p className="m-0 max-w-[880px] text-section font-normal text-navy">{summarySentence(barri.name, shown, range.from, range.to)}</p>
       </section>
 
-      <section className="homes-panel" aria-labelledby="homes-title">
-        <h2 id="homes-title">On viuen els visitants · {lastMonth ? formatMonth(lastMonth.month) : ""}</h2>
-        <p className="hint">Visitants únics d'un sol mes (no es poden sumar mesos).</p>
-        {lastMonth ? <CoverageBadge value={lastMonth.visitors} /> : null}
-        <div className="homes-grid">
-          <HomesMap homes={homes} />
-          <HomesList homes={homes} />
-        </div>
-      </section>
+      {noData ? (
+        <Card role="status" className="bg-surface text-body text-text-2">
+          No hi ha dades per a {single ? "aquest mes" : "aquest període"}. Prova un altre període.
+        </Card>
+      ) : (
+        <>
+          <section aria-labelledby="kpis-title">
+            <h2 id="kpis-title" className="sr-only">Indicadors</h2>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:[grid-template-columns:repeat(var(--n),minmax(0,1fr))]"
+                 style={{ ["--n" as string]: cards.length }}>
+              {cards}
+            </div>
+          </section>
 
-      <section aria-labelledby="series-title">
-        <h2 id="series-title">Evolució mensual</h2>
-        <CoverageBadge value={summary.visitors} />
-        <TimeSeries months={barri.months} from={range.from} to={range.to} baseYear={baseYear} />
-      </section>
-    </>
+          <section aria-labelledby="homes-title" className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-end justify-between gap-2">
+              <div>
+                <h2 id="homes-title" className="m-0 text-section font-semibold text-navy">On viuen els visitants</h2>
+                <p className="m-0 text-caption text-text-2">Mitjana mensual del període per municipi de residència (no es sumen mesos).</p>
+              </div>
+              <StatusDot value={summary.visitors} />
+            </div>
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[3fr_2fr] lg:items-stretch">
+              <HomesMap homes={homes} pilot={pilot} />
+              <Card className="h-full">
+                <h3 className="m-0 mb-3 text-body font-semibold text-navy">Principals municipis</h3>
+                <Ranking homes={homes} />
+              </Card>
+            </div>
+          </section>
+
+          <section aria-labelledby="series-title" className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-end justify-between gap-2">
+              <h2 id="series-title" className="m-0 text-section font-semibold text-navy">Evolució mensual</h2>
+              <StatusDot value={summary.visitors} />
+            </div>
+            <Card><EvolutionChart all={barri.months} from={range.from} to={range.to} baseYear={baseYear} /></Card>
+          </section>
+        </>
+      )}
+
+      <div className="flex flex-col gap-3">
+        <AccordionSection value="data" title="Veure les dades">
+          <DataTable months={shown} all={barri.months} baseYear={baseYear} />
+        </AccordionSection>
+        <AccordionSection value="method" title="Mètode i limitacions">
+          <MethodSection meta={meta} />
+        </AccordionSection>
+      </div>
+    </div>
   );
 }

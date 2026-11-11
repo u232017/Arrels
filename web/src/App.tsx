@@ -1,38 +1,42 @@
-import { BarriSelector } from "./components/BarriSelector";
 import { BarriView } from "./components/BarriView";
-import { MethodSection } from "./components/MethodSection";
-import { MonthRange } from "./components/MonthRange";
+import { Footer } from "./components/Footer";
+import { TopBar } from "./components/TopBar";
+import { Skeleton } from "./components/ui/skeleton";
+import { TooltipProvider } from "./components/ui/tooltip";
 import { DATA_DIR } from "./data";
 import { useArrelsData } from "./useArrelsData";
+
+function LoadingSkeleton() {
+  return (
+    <div role="status" aria-label="Carregant dades…" className="flex flex-col gap-6">
+      <span className="sr-only">Carregant dades…</span>
+      <Skeleton className="h-9 w-72" />
+      <Skeleton className="h-14 w-full max-w-[880px]" />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <Skeleton className="h-32" /><Skeleton className="h-32" /><Skeleton className="h-32" />
+      </div>
+      <Skeleton className="h-[480px]" />
+      <Skeleton className="h-[320px]" />
+    </div>
+  );
+}
 
 export function App({ dataDir = DATA_DIR }: { dataDir?: string }) {
   const { meta, code, setCode, barri, range, setRange, error, loading } = useArrelsData(dataDir);
   const baseYear = meta?.window.start.slice(0, 4) ?? "";
 
   return (
-    <>
-      <header className="top">
-        <h1>Arrels</h1>
-        <p className="top__lead">Patrons de visitants regionals en tres barris de Barcelona, a partir de dades de mobilitat agregades.</p>
-      </header>
-      <main className="page">
-        {loading ? <p role="status" className="status">Carregant dades…</p> : null}
-        {error ? <p role="alert" className="error">{error}</p> : null}
-        {meta ? (
-          <section className="controls" aria-label="Filtres">
-            <BarriSelector pilots={meta.pilots} value={code} onChange={setCode} />
-            {barri && range ? (
-              <MonthRange months={barri.months.map((m) => m.month)} from={range.from} to={range.to}
-                          onChange={(from, to) => setRange({ from, to })} />
-            ) : null}
-          </section>
-        ) : null}
-        {barri && range ? <BarriView barri={barri} range={range} baseYear={baseYear} /> : null}
-        {meta ? <MethodSection meta={meta} /> : null}
-      </main>
-      <footer className="foot">
-        <p>Barri Lab (201_F, UPF) · Telefónica Mobile Data Challenge 2026 · Dades agregades; cap valor per sota de 15.</p>
-      </footer>
-    </>
+    <TooltipProvider>
+      <div className="flex min-h-screen flex-col bg-white text-body text-navy">
+        <TopBar meta={meta} code={code} onCode={setCode} months={barri?.months.map((m) => m.month) ?? []}
+                range={range} onRange={setRange} />
+        <main className="mx-auto w-full max-w-[1280px] flex-1 px-4 py-6 lg:px-8 lg:py-8">
+          {error ? <p role="alert" className="mb-6 rounded-card border border-line bg-surface p-4 text-body text-navy">{error}</p> : null}
+          {loading ? <LoadingSkeleton /> : null}
+          {!loading && meta && barri && range ? <BarriView barri={barri} meta={meta} range={range} baseYear={baseYear} /> : null}
+        </main>
+        <Footer meta={meta} />
+      </div>
+    </TooltipProvider>
   );
 }

@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { App } from "./App";
+import { choose } from "./test-utils";
 
 vi.mock("./components/HomesMap", () => ({ HomesMap: () => <div>mapa</div> }));
 
@@ -29,16 +30,17 @@ describe("App", () => {
   it("switches barri", async () => {
     render(<App dataDir="sample" />);
     await screen.findByRole("heading", { level: 2, name: "Barri de mostra A" });
-    await userEvent.selectOptions(screen.getByLabelText("Barri"), "000000002");
+    await choose("Barri", "Barri de mostra B");
     expect(await screen.findByRole("heading", { level: 2, name: "Barri de mostra B" })).toBeInTheDocument();
   });
 
   it("changing the month range updates the badge window", async () => {
     render(<App dataDir="sample" />);
     await screen.findByRole("heading", { level: 2, name: "Barri de mostra A" });
-    await userEvent.selectOptions(screen.getByLabelText("Des de"), "2025-01");
+    await choose("Des de", "gener 2025");
     const card = screen.getByRole("article", { name: /visitants regionals/i });
-    await waitFor(() => expect(card).toHaveTextContent("2025-01 – 2025-08"));
+    await waitFor(() => expect(within(card).getByTestId("coverage-badge")).toHaveAccessibleName(/2025-01 – 2025-08/));
+    expect(card).not.toHaveTextContent("Finestra"); // the long coverage line is never on screen
   });
 
   it("shows an error message when data cannot be loaded", async () => {
@@ -47,8 +49,12 @@ describe("App", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(/404/);
   });
 
-  it("always shows the limitations section", async () => {
+  it("has a collapsed 'Mètode i limitacions' section that opens", async () => {
     render(<App dataDir="sample" />);
-    expect(await screen.findByRole("region", { name: "Mètode i limitacions" })).toBeVisible();
+    const trigger = await screen.findByRole("button", { name: "Mètode i limitacions" });
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    await userEvent.click(trigger);
+    const panel = await screen.findByRole("region", { name: "Mètode i limitacions" });
+    expect(panel).toHaveTextContent(/patrons, no causes/i);
   });
 });

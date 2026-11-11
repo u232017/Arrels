@@ -1,11 +1,11 @@
 // Regression tests for typescript-reviewer findings.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import { App } from "./App";
+import { choose } from "./test-utils";
 import { KpiCard } from "./components/KpiCard";
-import { TimeSeries } from "./components/TimeSeries";
+import { chartRows } from "./components/EvolutionChart";
 import type { Barri, BarriMonth, Value } from "./types";
 
 vi.mock("./components/HomesMap", () => ({ HomesMap: () => <div>mapa</div> }));
@@ -32,9 +32,9 @@ describe("App robustness", () => {
     render(<App dataDir="sample" />);
     await screen.findByRole("heading", { level: 2, name: "Barri de mostra A" });
     releaseA = () => {};
-    await userEvent.selectOptions(screen.getByLabelText("Barri"), "000000002");
-    await userEvent.selectOptions(screen.getByLabelText("Barri"), "000000001");
-    await userEvent.selectOptions(screen.getByLabelText("Barri"), "000000003");
+    await choose("Barri", "Barri de mostra B");
+    await choose("Barri", "Barri de mostra A");
+    await choose("Barri", "Barri de mostra C");
     await screen.findByRole("heading", { level: 2, name: "Barri de mostra C" });
     releaseA?.();
     await new Promise((r) => setTimeout(r, 20));
@@ -50,9 +50,9 @@ describe("App robustness", () => {
     });
     render(<App dataDir="sample" />);
     await screen.findByRole("heading", { level: 2, name: "Barri de mostra A" });
-    await userEvent.selectOptions(screen.getByLabelText("Barri"), "000000002");
+    await choose("Barri", "Barri de mostra B");
     await screen.findByRole("heading", { level: 2, name: "Barri de mostra B" });
-    expect(screen.getByLabelText("Fins a")).toHaveValue("2023-06");
+    expect(screen.getByRole("combobox", { name: "Fins a" })).toHaveTextContent("juny 2023");
   });
 
   it("shows an error instead of crashing on a file that breaks the contract", async () => {
@@ -75,9 +75,9 @@ describe("App robustness", () => {
     });
     render(<App dataDir="sample" />);
     await screen.findByRole("heading", { level: 2, name: "Barri de mostra A" });
-    await userEvent.selectOptions(screen.getByLabelText("Barri"), "000000002");
+    await choose("Barri", "Barri de mostra B");
     await screen.findByRole("alert");
-    await userEvent.selectOptions(screen.getByLabelText("Barri"), "000000003");
+    await choose("Barri", "Barri de mostra C");
     await screen.findByRole("heading", { level: 2, name: "Barri de mostra C" });
     await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
   });
@@ -88,7 +88,7 @@ describe("App robustness", () => {
     await screen.findByRole("heading", { level: 2, name: "Barri de mostra A" });
     for (const name of [/on viuen els visitants/i, /evolució mensual/i]) {
       const section = screen.getByRole("region", { name });
-      expect(section.querySelector("[data-testid='coverage-badge']")).not.toBeNull();
+      expect(within(section).getAllByTestId("coverage-badge").length).toBeGreaterThan(0);
     }
   });
 
@@ -97,15 +97,15 @@ describe("App robustness", () => {
     render(<App dataDir="sample" />);
     const card = await screen.findByRole("article", { name: /canvi vs any anterior/i });
     expect(card).toHaveTextContent("vs mateixos mesos de l'any anterior");
-    expect(card).toHaveTextContent("2024-09 – 2025-08 vs 2023-09 – 2024-08");
+    expect(within(card).getByTestId("coverage-badge")).toHaveAccessibleName(/2024-09 – 2025-08 vs 2023-09 – 2024-08/);
   });
 
   it("hides the change when the previous-year months do not exist", async () => {
     stub(async (url) => ok(read(url.replace(/^[^/]+\//, ""))));
     render(<App dataDir="sample" />);
     await screen.findByRole("article", { name: /canvi vs any anterior/i });
-    await userEvent.selectOptions(screen.getByLabelText("Des de"), "2023-01");
-    await userEvent.selectOptions(screen.getByLabelText("Fins a"), "2023-12");
+    await choose("Des de", "gener 2023");
+    await choose("Fins a", "desembre 2023");
     await waitFor(() => expect(screen.queryByRole("article", { name: /canvi vs any anterior/i })).not.toBeInTheDocument());
   });
 });
@@ -119,14 +119,13 @@ describe("KpiCard", () => {
   });
 });
 
-describe("TimeSeries base year", () => {
+describe("chart base year", () => {
   it("uses the base year it is given", () => {
     const badge = { window: "w", pct_published: 100, pct_suppressed: 0, pct_absent: 0 };
     const m = (month: string, n: number): BarriMonth => ({
       month, visitors: { value: n, state: "published", badge }, yoy: { value: 0, state: "published", badge },
       weekend_share: { value: 0, state: "published", badge }, holidays: [] });
-    render(<TimeSeries months={[m("2024-01", 50), m("2025-01", 80)]} from="2025-01" to="2025-01" baseYear="2024" />);
-    expect(screen.getAllByRole("row")[1]).toHaveTextContent("50");
-    expect(screen.getByRole("columnheader", { name: /2024/ })).toBeInTheDocument();
+    const rows = chartRows([m("2024-01", 50), m("2025-01", 80)], "2025-01", "2025-01", "2024");
+    expect(rows[0]).toMatchObject({ visitors: 80, base: 50 });
   });
 });

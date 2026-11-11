@@ -1,0 +1,41 @@
+@import "tailwindcss";
+@import "@fontsource-variable/inter";
+
+/* Arrels design tokens (deck palette). Light theme only. */
+@theme {
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+
+  --color-navy: #0f1f38;        /* titles, main text, selected barri */
+  --color-teal: #0e8c92;        /* accent, main data line, map circles, bars */
+  --color-teal-dark: #0b6e73;   /* small text and links (>= 4.5:1 on white) */
+  --color-text-2: #4a5568;      /* secondary text */
+  --color-line: #e2e8f0;        /* borders */
+  --color-surface: #f5f7f9;     /* cards and panels */
+  --color-ref: #94a3b8;         /* 2023 reference line (dashed) */
+  --color-ok: #2f855a;          /* status: published */
+  --color-partial: #b7791f;     /* status: partly <15 */
+  --color-none: #a0aec0;        /* status: no data */
+  --color-ramp-0: #d5eeef;      /* map scale, light end */
+  --color-ramp-1: #0b6e73;      /* map scale, dark end */
+
+  /* Type scale: nothing else is used. */
+  --text-title: 28px;   --text-title--line-height: 36px;
+  --text-section: 18px; --text-section--line-height: 26px;
+  --text-body: 14px;    --text-body--line-height: 22px;
+  --text-caption: 12px; --text-caption--line-height: 18px;
+  --text-kpi: 32px;     --text-kpi--line-height: 40px;
+
+  --radius-card: 12px;
+}
+
+@layer base {
+  html { background: #ffffff; color: var(--color-navy); }
+  body { margin: 0; font-family: var(--font-sans); font-size: var(--text-body); line-height: var(--text-body--line-height); background: #ffffff; }
+  :focus-visible { outline: 2px solid var(--color-teal-dark); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+  }
+}
+
+/* MapLibre: compact attribution stays readable */
+.maplibregl-ctrl-attrib { font-size: 12px; }
