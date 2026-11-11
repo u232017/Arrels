@@ -23,4 +23,4 @@ Registro de decisiones del equipo. Cada entrada: fecha, decisión, motivo, impac
 
 - `cod_municipio_residencia = "NA"` en Tabla 9. Propuesta por defecto: mostrar como
   "residència desconeguda" en la lista, sin punto en el mapa.
-- Barris piloto (Fase 3).
+- Barris piloto (Fase 3): candidatos y evidencia en `docs/PILOT_CANDIDATES.md`. ⛔ decide el equipo (D3).
