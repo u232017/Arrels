@@ -17,3 +17,9 @@ data/
 *.parquet
 *.xlsx
 .env
+
+# Datos de referencia públicos (festivos) sí se versionan
+!pipeline/reference/
+!pipeline/reference/*.csv
+.DS_Store
+*.egg-info/

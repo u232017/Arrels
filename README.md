@@ -6,69 +6,43 @@ El proyecto se desarrolla para el **Open Data Challenge de Càtedres Telefónica
 
 ## Estado
 
-Este repositorio contiene la base de preparación de datos. El dataset todavía no está incluido. Cuando esté disponible, guardad una copia original en `data/raw/` y ejecutad el limpiador.
+MVP en desarrollo (entrega 04/12/2026). Plan: `docs/PLAN.md`. Datos: `docs/DATA_DICTIONARY.md`.
 
 ## Estructura
 
 ```text
 .
-├── data/
-│   ├── raw/          # Datos originales, no modificados
-│   └── processed/    # Datos listos para la visualización
-├── src/arrels/
-│   └── clean_data.py # Limpieza y normalización reproducible
-├── tests/
-│   └── test_clean_data.py
-├── LICENSE
-└── pyproject.toml
+├── pipeline/   # paquete Python: config, ingest, quality, aggregate, integrate, ...
+├── tests/      # pytest, solo fixtures sintéticos (nunca datos reales)
+├── scripts/    # utilidades (recon de la Fase 0)
+├── notebooks/  # notebook reproducible
+├── web/        # página web (Vite + React + TS)
+└── docs/       # DATA_DICTIONARY, PLAN, METHOD, DECISIONS, BACKLOG
 ```
 
 ## Preparar el entorno
 
-El limpiador usa únicamente la biblioteca estándar de Python.
+Requiere Python 3.12.
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-python -m pip install -e ".[dev]"
+make setup                 # crea .venv e instala dependencias fijadas
+cp .env.example .env       # y rellenar las rutas locales a los datos
 ```
 
-## Limpiar un dataset
-
-Para un CSV:
+## Comandos
 
 ```bash
-python -m arrels.clean_data data/raw/dataset.csv \
-  --output data/processed/dataset_clean.csv \
-  --summary data/processed/dataset_summary.json
+make data   # ejecuta el pipeline (usa la caché Parquet en data/cache/)
+make test   # tests + cobertura (mínimo 80 %)
+make web    # build de la web
 ```
 
-También acepta JSON con una lista de objetos:
-
-```bash
-python -m arrels.clean_data data/raw/dataset.json
-```
-
-El proceso:
-
-- normaliza nombres de columnas a `snake_case`;
-- elimina filas completamente vacías y duplicados;
-- convierte valores vacíos a `null` en el resumen y conserva el CSV limpio;
-- normaliza espacios y comillas en textos;
-- convierte números con formatos habituales (`1.234,56`, porcentajes y separadores);
-- genera un resumen con filas de entrada/salida, columnas y valores ausentes.
-
-El script no presupone todavía los nombres definitivos del dataset. Cuando llegue el fichero, se podrán añadir reglas específicas para columnas de barrio, municipio, origen, destino y población sin alterar el flujo general.
+Los datos de Telefónica están bajo NDA: nunca se suben a Git (`data/`, `*.csv`, `*.parquet`, `.env`
+están ignorados). Solo se versionan datos públicos de referencia en `pipeline/reference/`.
 
 ## Convenciones de datos
 
 No se deben subir datos personales ni identificadores que permitan reidentificar individuos. La visualización debe trabajar con datos agregados y respetar las condiciones de uso y atribución de la fuente oficial.
-
-## Ejecutar tests
-
-```bash
-pytest
-```
 
 ## Licencia
 
