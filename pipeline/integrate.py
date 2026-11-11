@@ -1,0 +1,3 @@
+"""Not implemented yet (TDD RED)."""
+class JoinIntegrityError(ValueError): ...
+def checked_join(*a, **k): raise NotImplementedError
