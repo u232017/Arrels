@@ -21,11 +21,11 @@ export function HomesMap({ homes }: { homes: Home[] }) {
     let map: { remove: () => void } | undefined;
     let cancelled = false;
     import("maplibre-gl")
-      .then(async ({ default: maplibre }) => {
+      .then(async ({ Map: MaplibreMap }) => {
         await import("maplibre-gl/dist/maplibre-gl.css");
         if (cancelled || !ref.current) return;
         const max = Math.max(...points.map((p) => p.visitors));
-        const m = new maplibre.Map({ container: ref.current, style: STYLE_URL, center: CENTER, zoom: ZOOM,
+        const m = new MaplibreMap({ container: ref.current, style: STYLE_URL, center: CENTER, zoom: ZOOM,
                                      keyboard: false });
         map = m;
         let loaded = false;
