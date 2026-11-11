@@ -117,3 +117,11 @@ def read_tourism(
           CAST(visitantes AS BIGINT) AS visitantes,
           '{PUBLISHED}' AS state
         FROM {source}""")
+
+
+def ingest_mobility(*a, **k):  # TDD RED stub
+    raise NotImplementedError
+
+
+def load_mobility(*a, **k):  # TDD RED stub
+    raise NotImplementedError
