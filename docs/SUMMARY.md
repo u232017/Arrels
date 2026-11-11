@@ -10,7 +10,7 @@ integrar alquiler, población y HUT (ficheros no disponibles).
 ```bash
 make setup                 # Python 3.12 + dependencias web
 cp .env.example .env       # rellenar rutas locales a los datos
-make test                  # 134 tests, cobertura 91,9 %
+make test                  # 138 tests, cobertura ~92 %
 make data                  # pipeline + export JSON (42–100 s en frío, ~11 s desde caché)
 make notebook              # notebook reproducible (111 s en frío, 11–19 s desde caché)
 make web-dev               # página en http://localhost:5173
@@ -50,6 +50,7 @@ make web-dev               # página en http://localhost:5173
 | I12 | Fechas de festivos sin verificar; festes majors pendientes | Media | **Abierto** (B2, B3) |
 | I13 | Portátil con solo ~16 GB libres | Baja | A tener en cuenta |
 | I14 | `make setup` no instalaba dependencias web (visto en el clon limpio) | Baja | Resuelto |
+| I15 | La introducción heredada del README decía que la gente "ha tenido que marcharse" del barri (afirmación causal); el grep de palabras no lo detectaba | Media | Resuelto (texto neutral) |
 
 ## Preguntas para la próxima reunión con el mentor
 
@@ -66,12 +67,12 @@ make web-dev               # página en http://localhost:5173
 
 | Criterio | Estado |
 |---|---|
-| `make test` verde; tests R1–R5 existen y pasan | ✅ 134 tests, 91,9 % |
+| `make test` verde; tests R1–R5 existen y pasan | ✅ 138 tests, ~92 % (web: 55 tests, 99,8 %; e2e: 14) |
 | Notebook < 30 min en bruto y < 2 min desde caché | ✅ 111 s / 11–19 s |
 | Toda unión mantiene filas y suma de `viajes` (afirmado) | ✅ `checked_join` + caché idéntica a los CSV |
 | Web con JSON estático < 5 MB, 2–3 barris, insignia en cada número | ✅ 399 KB, 3 barris, insignias en KPIs, mapa y serie |
 | Sin datos en Git; `/security-scan` limpio; ningún valor exportado < 15 | ⚠️ Sin datos en Git y ningún valor < 15; AgentShield pendiente (B4) |
-| Sin lenguaje no neutral (grep exili/expuls/echa/culpa) | ✅ |
+| Sin lenguaje no neutral (grep exili/expuls/echa/culpa) | ✅ (y revisión más amplia; ver I15) |
 | `docs/` completo + este resumen | ✅ (alquiler/población/HUT pendientes) |
 
 ## Registros de revisión
