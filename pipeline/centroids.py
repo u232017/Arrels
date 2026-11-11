@@ -55,10 +55,12 @@ def write_centroids(path: Path, centroids: list[Centroid]) -> None:
 
 
 if __name__ == "__main__":
+    import logging
     import sys
 
     from pipeline.export import CENTROIDS_FILE
 
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     rows = centroids_from_capitals(Path(sys.argv[1]))
     write_centroids(CENTROIDS_FILE, rows)
-    print(f"{len(rows)} municipalities -> {CENTROIDS_FILE}")
+    logging.getLogger(__name__).info("%d municipalities -> %s", len(rows), CENTROIDS_FILE)
