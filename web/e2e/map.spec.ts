@@ -14,8 +14,9 @@ test("residence map loads its worker and draws without falling back", async ({ p
   await page.goto("/");
   const map = page.getByRole("img", { name: /mapa dels municipis/i });
   await expect(map.locator("canvas")).toBeVisible();
-  await page.waitForFunction(() => document.querySelector(".map canvas")?.getAttribute("tabindex") === "-1");
+  await expect(map.locator("canvas")).toHaveAttribute("tabindex", "-1");
   await page.waitForTimeout(1500); // give the worker time to fail if it is going to
   await expect(page.getByText(/mapa no disponible/i)).toHaveCount(0);
+  await expect(page.getByTestId("barri-pin")).toContainText("Barri de mostra A"); // selected barri marked
   expect(errors.filter((e) => /worker/i.test(e))).toEqual([]);
 });

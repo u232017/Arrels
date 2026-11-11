@@ -2,21 +2,11 @@ import type { Locator, Page } from "@playwright/test";
 
 export class ArrelsPage {
   readonly page: Page;
-  readonly barri: Locator;
-  readonly from: Locator;
-  readonly to: Locator;
-  readonly barriName: Locator;
   readonly kpis: Locator;
-  readonly method: Locator;
 
   constructor(page: Page) {
     this.page = page;
-    this.barri = page.getByLabel("Barri");
-    this.from = page.getByLabel("Des de");
-    this.to = page.getByLabel("Fins a");
-    this.barriName = page.getByRole("heading", { level: 2 }).first();
     this.kpis = page.getByRole("region", { name: "Indicadors" });
-    this.method = page.getByRole("region", { name: "Mètode i limitacions" });
   }
 
   async goto() {
@@ -24,6 +14,20 @@ export class ArrelsPage {
     await this.page.route("**/tiles.openfreemap.org/**", (r) => r.abort());
     await this.page.goto("/");
     await this.kpis.waitFor();
+  }
+
+  select(label: string) {
+    return this.page.getByRole("combobox", { name: label });
+  }
+
+  /** Pick an option in a labelled Radix Select. */
+  async choose(label: string, option: string) {
+    await this.select(label).click();
+    await this.page.getByRole("option", { name: option, exact: true }).click();
+  }
+
+  heading(name: string) {
+    return this.page.getByRole("heading", { level: 2, name, exact: true });
   }
 
   kpi(name: RegExp) {

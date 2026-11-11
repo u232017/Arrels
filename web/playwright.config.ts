@@ -19,8 +19,8 @@ export default defineConfig({
     screenshot: "only-on-failure",
   },
   projects: [
-    { name: "desktop", use: { ...devices["Desktop Chrome"], channel: "chrome" } },
-    { name: "phone", use: { ...devices["Pixel 7"], channel: "chrome" } },
+    { name: "desktop", use: { ...devices["Desktop Chrome"], channel: "chrome", viewport: { width: 1440, height: 900 } } },
+    { name: "phone", use: { ...devices["Pixel 7"], channel: "chrome", viewport: { width: 390, height: 844 } } },
   ],
   webServer: {
     command: SERVER,
