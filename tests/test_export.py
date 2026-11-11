@@ -158,3 +158,16 @@ def test_holidays_are_grouped_by_month_in_date_order(con, tmp_path):
         (DATE '2024-12-27', false, NULL)) t(day, is_holiday, holiday_name))
         TO '{path}' (FORMAT parquet)""")
     assert _holidays_by_month(con, path) == {"2024-12": ["Nadal", "Sant Esteve"]}
+
+
+@pytest.mark.parametrize("raw, nice", [
+    ("Hospitalet de Llobregat, L'", "L'Hospitalet de Llobregat"),
+    ("Prat de Llobregat, El", "El Prat de Llobregat"),
+    ("Masnou, El", "El Masnou"),
+    ("Garriga, La", "La Garriga"),
+    ("Sabadell", "Sabadell"),
+])
+def test_home_names_put_the_article_first(raw, nice):
+    from pipeline.export import display_name
+
+    assert display_name(raw) == nice

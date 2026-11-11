@@ -105,6 +105,17 @@ def _weekend_value(month: date, row: Row | None) -> Json:
     }
 
 
+ARTICLES = ("L'", "El", "La", "Els", "Les")
+
+
+def display_name(name: str) -> str:
+    """Move a trailing article to the front: "Prat de Llobregat, El" -> "El Prat de Llobregat"."""
+    base, sep, article = name.rpartition(", ")
+    if not sep or article not in ARTICLES:
+        return name
+    return f"{article}{base}" if article.endswith("'") else f"{article} {base}"
+
+
 def _homes(rows: list[Row], centroids: Mapping[str, tuple[float, float]], top: int) -> list[Json]:
     ranked = sorted(rows, key=lambda r: (-r["visitors"], r["home"]))
     head, rest = ranked[:top], ranked[top:]
@@ -113,7 +124,7 @@ def _homes(rows: list[Row], centroids: Mapping[str, tuple[float, float]], top: i
         lat, lon = centroids.get(code, (None, None))
         return {"code": code, "name": name, "visitors": int(visitors), "lat": lat, "lon": lon}
 
-    homes = [home(r["home"], r["home_name"], r["visitors"]) for r in head]
+    homes = [home(r["home"], display_name(r["home_name"]), r["visitors"]) for r in head]
     if rest:
         homes.append(home(OTHER_HOMES_CODE, OTHER_HOMES_NAME, sum(r["visitors"] for r in rest)))
     return homes
