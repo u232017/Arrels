@@ -182,3 +182,25 @@ def test_default_export_keeps_every_published_home_town():
     homes = _month(payload, "2024-02")["homes"]
     assert len(homes) == 60
     assert OTHER_HOMES_CODE not in {h["code"] for h in homes}
+
+
+def test_meta_pilots_may_carry_coordinates():
+    meta, _ = sample_payloads()
+    meta["pilots"][0] = {**meta["pilots"][0], "lat": 41.39, "lon": 2.17}
+    validate(meta, "meta")
+
+
+def test_meta_pilot_coordinates_must_be_numbers():
+    meta, _ = sample_payloads()
+    meta["pilots"][0] = {**meta["pilots"][0], "lat": "41.39"}
+    with pytest.raises(ValueError, match="schema"):
+        validate(meta, "meta")
+
+
+def test_pilot_entries_include_known_coordinates():
+    from pipeline.export import pilot_entries
+
+    out = pilot_entries({"080190308": "Sants", "080190904": "Sant Andreu"},
+                        {"080190308": (41.37746, 2.13635)})
+    assert out == [{"code": "080190308", "name": "Sants", "lat": 41.37746, "lon": 2.13635},
+                   {"code": "080190904", "name": "Sant Andreu"}]

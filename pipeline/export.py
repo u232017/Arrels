@@ -220,6 +220,8 @@ def write_json(path: Path, doc: Json) -> None:
 
 SAMPLE_PILOTS = (("000000001", "Barri de mostra A"), ("000000002", "Barri de mostra B"),
                  ("000000003", "Barri de mostra C"))
+SAMPLE_PILOT_COORDS = {"000000001": (41.39, 2.17), "000000002": (41.38, 2.14),
+                       "000000003": (41.43, 2.19)}  # synthetic positions inside Barcelona
 SAMPLE_HOMES = (("00001", "Municipi U", 41.55, 2.11), ("00002", "Municipi D", 41.45, 2.25),
                 ("00003", "Municipi T", 41.36, 2.10))
 
@@ -260,7 +262,7 @@ def sample_payloads() -> tuple[Json, list[Json]]:
         "generated": "sample",
         "window": {"start": "2023-01", "end": "2025-08"},
         "threshold": PROVIDER_THRESHOLD,
-        "pilots": [{"code": c, "name": n} for c, n in SAMPLE_PILOTS],
+        "pilots": pilot_entries(dict(SAMPLE_PILOTS), SAMPLE_PILOT_COORDS),
         "missing_days": ["2024-02-11"],
         "partial_days": ["2025-04-12"],
     }
@@ -270,6 +272,7 @@ def sample_payloads() -> tuple[Json, list[Json]]:
 # ------------------------------------------------------------------ glue: cache -> JSON
 
 CENTROIDS_FILE = Path(__file__).parent / "reference" / "municipality_centroids.csv"
+PILOT_CENTROIDS_FILE = Path(__file__).parent / "reference" / "pilot_centroids.csv"
 WEB_DATA_DIR = Path("web/public/data")
 WEB_SAMPLE_DIR = Path("web/public/sample")
 
@@ -299,6 +302,19 @@ def _holidays_by_month(con: Any, calendar_path: Path) -> dict[str, list[str]]:
     return dict(out)
 
 
+def pilot_entries(
+    pilots: Mapping[str, str], coords: Mapping[str, tuple[float, float]]
+) -> list[Json]:
+    """meta.pilots: code and name, plus lat/lon when the barri's centroid is known."""
+    out: list[Json] = []
+    for code, name in pilots.items():
+        entry: Json = {"code": code, "name": name}
+        if code in coords:
+            entry["lat"], entry["lon"] = coords[code]
+        out.append(entry)
+    return out
+
+
 def write_all(out_dir: Path, meta: Json, barris: list[Json]) -> int:
     """Validate, check the threshold, write meta.json + barri/<code>.json, check total size."""
     validate(meta, "meta")
@@ -312,6 +328,7 @@ def write_all(out_dir: Path, meta: Json, barris: list[Json]) -> int:
 
 
 def export_real(con: Any, cache_dir: Path, out_dir: Path = WEB_DATA_DIR) -> int:
+    from pipeline.centroids import load_pilot_centroids
     from pipeline.indicators import PILOTS
 
     ind = cache_dir / "indicators"
@@ -338,7 +355,7 @@ def export_real(con: Any, cache_dir: Path, out_dir: Path = WEB_DATA_DIR) -> int:
         "generated": date.today().isoformat(),
         "window": {"start": start, "end": end},
         "threshold": PROVIDER_THRESHOLD,
-        "pilots": [{"code": c, "name": n} for c, n in PILOTS.items()],
+        "pilots": pilot_entries(PILOTS, load_pilot_centroids(PILOT_CENTROIDS_FILE)),
         "missing_days": days("missing"),
         "partial_days": days("partial"),
     }

@@ -44,7 +44,7 @@ export interface Meta {
   generated: string;
   window: { start: string; end: string };
   threshold: number;
-  pilots: { code: string; name: string }[];
+  pilots: { code: string; name: string; lat?: number; lon?: number }[];
   missing_days: string[];
   partial_days: string[];
 }

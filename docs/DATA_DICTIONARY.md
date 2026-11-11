@@ -129,6 +129,8 @@ Las cifras de enlace (97,3 %, 100 %, 95,33 %) del enunciado no se han podido ver
 | `pipeline/reference/holidays.csv` | Calendario laboral oficial (DOGC) y fiestas locales de Barcelona — fechas por verificar | `day, scope (ES/CAT/BCN), name_ca, source` |
 | `pipeline/reference/municipality_centroids.csv` | Generalitat de Catalunya, *Capitals de municipi georeferenciades* (analisi.transparenciacatalunya.cat, `wpyq-we8x`; ICGC Base municipal 1:5.000), descargado el 2026-11-11. 947 municipios | `code` (INE, 5 dígitos), `lat`, `lon` |
 
+| `pipeline/reference/pilot_centroids.csv` | Ajuntament de Barcelona, Open Data BCN, *Districtes i barris* (`BarcelonaCiutat_Barris.csv`, CC-BY 4.0), descargado el 2026-11-11. Centroide del polígono WGS84 de los 3 barris piloto | `code, name, lat, lon` |
+
 Regenerar los centroides: `python -I -m pipeline.centroids <ruta/al/export.csv>`.
 
 ## 6. Preguntas abiertas
