@@ -17,8 +17,17 @@ from pipeline.indicators import (
 )
 from pipeline.ingest import read_mobility, read_tourism
 from pipeline.quality import ABSENT, PUBLISHED, build_calendar
-from tests.conftest import BARRI_A, BARRI_B, FEB_END, FEB_START, days, t9_row, trip
-from tests.conftest import write_mobility, write_t9
+from tests.conftest import (
+    BARRI_A,
+    BARRI_B,
+    FEB_END,
+    FEB_START,
+    days,
+    t9_row,
+    trip,
+    write_mobility,
+    write_t9,
+)
 
 MISSING_SUNDAY = date(2024, 2, 11)
 MATARO = "08121"

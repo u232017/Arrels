@@ -11,7 +11,14 @@ import duckdb
 from pipeline.aggregate import monthly_route_coverage
 from pipeline.config import Settings, connect, load_settings
 from pipeline.holidays import load_holidays, with_holiday_flags
-from pipeline.ingest import FAMILIES, DataContractError, ingest_mobility, load_mobility
+from pipeline.indicators import PILOTS, visitors_by_home, visitors_monthly, weekend_share
+from pipeline.ingest import (
+    FAMILIES,
+    DataContractError,
+    ingest_mobility,
+    load_mobility,
+    read_tourism,
+)
 from pipeline.quality import DAY_PARTIAL, build_calendar, missing_days
 from pipeline.sql import quote_literal
 
@@ -52,6 +59,27 @@ def calendar_from(
     return build_calendar(con, daily, start, end)
 
 
+def write_indicators(
+    con: duckdb.DuckDBPyConnection,
+    settings: Settings,
+    calendar: duckdb.DuckDBPyRelation,
+    coverage: duckdb.DuckDBPyRelation,
+) -> None:
+    """T10: indicator tables for the pilot barris (decision D3)."""
+    barris = list(PILOTS)
+    out = settings.cache_dir / "indicators"
+    t9 = read_tourism(con, settings.tourism_dir, "visitantes_regionales_barrio_yearmon")
+    start, end = calendar.aggregate(
+        "date_trunc('month', min(day))::DATE, date_trunc('month', max(day))::DATE").fetchone()
+    write_parquet(con, visitors_monthly(con, t9, barris, start, end),
+                  out / "visitors_monthly.parquet")
+    write_parquet(con, visitors_by_home(con, t9, barris), out / "visitors_by_home.parquet")
+    mobility = load_mobility(con, settings, "mun_barri")
+    write_parquet(con, weekend_share(con, mobility, coverage, calendar, barris),
+                  out / "weekend_share.parquet")
+    logger.info("indicators written to %s", out)
+
+
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     settings = load_settings()
@@ -85,6 +113,7 @@ def main() -> None:
     if negative:
         raise DataContractError(f"{negative} routes with negative days_absent")
     logger.info("route coverage: %s rows", coverage.count("*").fetchone()[0])
+    write_indicators(con, settings, calendar, coverage)
     logger.info("pipeline finished in %.0fs", time.time() - t0)
 
 
