@@ -68,7 +68,8 @@ class TestParquetCache:
 class TestHolidays:
     def test_one_row_per_date(self, con):
         hol = load_holidays(con)
-        assert hol.count("*").fetchone()[0] == hol.project("day").distinct().count("*").fetchone()[0]
+        n_rows = hol.count("*").fetchone()[0]
+        assert n_rows == hol.project("day").distinct().count("*").fetchone()[0]
 
     @pytest.mark.parametrize("day, scope", [
         (date(2024, 12, 25), "ES"),

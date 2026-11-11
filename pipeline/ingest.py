@@ -6,11 +6,16 @@ Every read is checked against the provider's data contract before it is returned
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 import duckdb
 
+from pipeline.cache import fingerprint, is_fresh, write_manifest
+from pipeline.config import Settings
 from pipeline.quality import PUBLISHED
+
+logger = logging.getLogger(__name__)
 
 FAMILY_PREFIX = {
     "barri_barri": "movilidad_barrios",
@@ -119,9 +124,41 @@ def read_tourism(
         FROM {source}""")
 
 
-def ingest_mobility(*a, **k):  # TDD RED stub
-    raise NotImplementedError
+
+def mobility_cache_path(settings: Settings, family: str) -> Path:
+    return settings.cache_dir / "mobility" / f"{family}.parquet"
 
 
-def load_mobility(*a, **k):  # TDD RED stub
-    raise NotImplementedError
+def ingest_mobility(
+    con: duckdb.DuckDBPyConnection, settings: Settings, family: str
+) -> Path:
+    """Write one family to Parquet (sorted by day). Skipped when the cache is fresh."""
+    sources = sorted(Path(settings.mobility_dir).glob(f"*/{FAMILY_PREFIX[family]}_*_origen.csv"))
+    if not sources:
+        raise FileNotFoundError(f"No {family} CSV files under {settings.mobility_dir}")
+    output = mobility_cache_path(settings, family)
+    current = fingerprint(sources)
+    if not settings.force_rebuild and is_fresh(output, current):
+        logger.info("%s: cache is fresh, skipping ingest", family)
+        return output
+    output.parent.mkdir(parents=True, exist_ok=True)
+    tmp = output.with_suffix(".tmp.parquet")
+    rel = read_mobility(con, settings.mobility_dir, family)
+    con.sql(
+        f"COPY ({rel.sql_query()} ORDER BY day) TO {_quote(tmp)} "
+        "(FORMAT parquet, COMPRESSION zstd)"
+    )
+    tmp.replace(output)
+    write_manifest(output, current)
+    logger.info("%s: wrote %s", family, output)
+    return output
+
+
+def load_mobility(
+    con: duckdb.DuckDBPyConnection, settings: Settings, family: str
+) -> duckdb.DuckDBPyRelation:
+    """Typed relation from the Parquet cache."""
+    path = mobility_cache_path(settings, family)
+    if not path.exists():
+        raise FileNotFoundError(f"{path} not found; run `make data` first")
+    return con.read_parquet(str(path))
