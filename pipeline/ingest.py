@@ -127,42 +127,57 @@ def read_tourism(
     return rel
 
 
-def mobility_cache_path(settings: Settings, family: str) -> Path:
-    """Parquet file that caches one family."""
-    return settings.cache_dir / "mobility" / f"{family}.parquet"
+def mobility_cache_dir(settings: Settings, family: str) -> Path:
+    """Folder with one Parquet file per month for one family."""
+    return settings.cache_dir / "mobility" / family
 
 
-def ingest_mobility(
-    con: duckdb.DuckDBPyConnection, settings: Settings, family: str
-) -> Path:
-    """Write one family to Parquet, reading the CSVs once. Skipped when the cache is fresh."""
-    files = mobility_files(settings.mobility_dir, family)
-    output = mobility_cache_path(settings, family)
-    current = fingerprint(files)
-    if not settings.force_rebuild and is_fresh(output, current):
-        logger.info("%s: cache is fresh, skipping ingest", family)
-        return output
-    output.parent.mkdir(parents=True, exist_ok=True)
+def _month_of(csv_path: Path) -> str:
+    return csv_path.parent.name  # folders are named YYYY-MM
+
+
+def _ingest_month(con: duckdb.DuckDBPyConnection, src: Path, output: Path, family: str) -> None:
     tmp = output.with_suffix(".tmp.parquet")
     try:
         con.sql(
-            f"COPY ({_typed_select(family, _csv_source(files))}) TO {quote_literal(tmp)} "
+            f"COPY ({_typed_select(family, _csv_source([src]))}) TO {quote_literal(tmp)} "
             "(FORMAT parquet, COMPRESSION zstd)"
         )
         validate_mobility(con.read_parquet(str(tmp)), family)
         tmp.replace(output)
     finally:
         tmp.unlink(missing_ok=True)
-    write_manifest(output, current)
-    logger.info("%s: wrote %s", family, output)
-    return output
+
+
+def ingest_mobility(
+    con: duckdb.DuckDBPyConnection, settings: Settings, family: str
+) -> list[Path]:
+    """Write one Parquet file per month, reading each CSV once.
+
+    Months whose source file is unchanged are skipped. Working month by month
+    keeps memory and temp disk bounded on a laptop.
+    """
+    files = mobility_files(settings.mobility_dir, family)
+    out_dir = mobility_cache_dir(settings, family)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    con.execute("SET preserve_insertion_order = false")
+    outputs = []
+    for src in files:
+        output = out_dir / f"{_month_of(src)}.parquet"
+        current = fingerprint([src])
+        if settings.force_rebuild or not is_fresh(output, current):
+            _ingest_month(con, src, output, family)
+            write_manifest(output, current)
+            logger.info("%s %s: written", family, _month_of(src))
+        outputs.append(output)
+    return outputs
 
 
 def load_mobility(
     con: duckdb.DuckDBPyConnection, settings: Settings, family: str
 ) -> duckdb.DuckDBPyRelation:
-    """Typed relation from the Parquet cache."""
-    path = mobility_cache_path(settings, family)
-    if not path.exists():
-        raise FileNotFoundError(f"{path} not found; run `make data` first")
-    return con.read_parquet(str(path))
+    """Typed relation over all cached months of one family."""
+    out_dir = mobility_cache_dir(settings, family)
+    if not any(out_dir.glob("*.parquet")):
+        raise FileNotFoundError(f"No cached {family} files in {out_dir}; run `make data` first")
+    return con.read_parquet(str(out_dir / "[0-9]*.parquet"))

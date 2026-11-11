@@ -7,7 +7,7 @@ from collections.abc import Iterable
 from pathlib import Path
 
 # Bump when the meaning of a cached file changes (columns, contract, rules).
-CACHE_VERSION = 2
+CACHE_VERSION = 3
 
 Fingerprint = dict[str, list[int]]
 
