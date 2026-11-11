@@ -32,3 +32,4 @@ def is_fresh(output: Path, current: Fingerprint) -> bool:
 
 def write_manifest(output: Path, current: Fingerprint) -> None:
     manifest_path(output).write_text(json.dumps(current, indent=1), encoding="utf-8")
+CACHE_VERSION = None  # TDD RED
