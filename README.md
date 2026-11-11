@@ -1,49 +1,113 @@
 # Arrels — Barri Lab
 
-Arrels es una demo para visualizar cómo se distribuyen los desplazamientos de población entre Barcelona y su entorno metropolitano: cuánta gente ha tenido que marcharse de su barrio de origen y cuánta sigue haciendo vida en él.
+Arrels es un análisis neutral y basado en datos de los **visitantes regionales** de tres barris de
+Barcelona: de qué municipios vienen, cómo cambia su número respecto a 2023 y qué parte de los viajes
+se hace en fin de semana. Muestra **patrones, no causas**.
 
-El proyecto se desarrolla para el **Open Data Challenge de Càtedres Telefónica 2026** por el equipo **Barri Lab**. La aplicación final incorporará un mapa y métricas por barrio o municipio a partir del dataset oficial que se facilite.
+Equipo **Barri Lab** (201_F, UPF) · **Telefónica Mobile Data Challenge 2026 — Challenge #3 (Open
+Innovation)** · Entrega: 04/12/2026.
 
 ## Estado
 
-MVP en desarrollo (entrega 04/12/2026). Plan: `docs/PLAN.md`. Datos: `docs/DATA_DICTIONARY.md`.
+MVP funcionando con datos reales para tres barris piloto (D3): la Dreta de l'Eixample, Sants y Sant
+Andreu. Pendiente: integrar alquiler, población y HUT (ficheros no disponibles). Resumen, change log,
+issue log y preguntas para el mentor: [`docs/SUMMARY.md`](docs/SUMMARY.md).
 
 ## Estructura
 
 ```text
 .
-├── pipeline/   # paquete Python: config, ingest, quality, aggregate, integrate, ...
+├── pipeline/   # paquete Python: config, ingest, quality, aggregate, integrate, holidays,
+│               # pilot, indicators, export, centroids, cache, run
 ├── tests/      # pytest, solo fixtures sintéticos (nunca datos reales)
-├── scripts/    # utilidades (recon de la Fase 0)
-├── notebooks/  # notebook reproducible
-├── web/        # página web (Vite + React + TS)
-└── docs/       # DATA_DICTIONARY, PLAN, METHOD, DECISIONS, BACKLOG
+├── contract/   # JSON Schema compartido entre pipeline/export.py y web/
+├── notebooks/  # notebook reproducible (se versiona sin salidas)
+├── web/        # página única (Vite + React + TypeScript), textos en catalán
+├── scripts/    # recon de la Fase 0, informe de barris piloto, notebook, docs
+└── docs/       # DATA_DICTIONARY, PLAN, METHOD, DECISIONS, PILOT_CANDIDATES, BACKLOG, SUMMARY
 ```
 
-## Preparar el entorno
+## Empezar
 
-Requiere Python 3.12.
+Requiere Python 3.12, Node 20+ y Google Chrome (para los tests e2e).
 
 ```bash
-make setup                 # crea .venv e instala dependencias fijadas
-cp .env.example .env       # y rellenar las rutas locales a los datos
+make setup
+cp .env.example .env   # rellenar las rutas a los datos (ver tabla de variables)
+make test
+make data
+make web-dev           # http://localhost:5173
 ```
 
 ## Comandos
 
-```bash
-make data   # ejecuta el pipeline (usa la caché Parquet en data/cache/)
-make test   # tests + cobertura (mínimo 80 %)
-make web    # build de la web
-```
+<!-- AUTO-GENERATED:commands -->
+| Comando | Qué hace |
+|---|---|
+| `make setup` | Crea .venv (Python 3.12) e instala dependencias fijadas, Python y web |
+| `make data` | Pipeline completo (ingesta → calidad → agregados → indicadores) y export JSON para la web |
+| `make test` | Tests del pipeline con cobertura (mínimo 80 %) |
+| `make lint` | ruff + mypy (Python) y tsc (web) |
+| `make notebook` | Genera y ejecuta notebooks/arrels_mvp.ipynb (salida en data/processed/) |
+| `make web` | Build estático de la web en web/dist/ |
+| `make web-dev` | Servidor de desarrollo de la web en http://localhost:5173 |
+| `make clean-cache` | Borra la caché Parquet (la próxima ejecución será en frío) |
+<!-- /AUTO-GENERATED:commands -->
 
-Los datos de Telefónica están bajo NDA: nunca se suben a Git (`data/`, `*.csv`, `*.parquet`, `.env`
-están ignorados). Solo se versionan datos públicos de referencia en `pipeline/reference/`.
+<!-- AUTO-GENERATED:npm -->
+| Comando (en `web/`) | Qué hace |
+|---|---|
+| `npm run dev` | Servidor de desarrollo (datos reales de `public/data/`) |
+| `npm run build` | Comprobación de tipos + build de producción |
+| `npm run preview` | Sirve el build de producción |
+| `npm run typecheck` | Solo comprobación de tipos |
+| `npm run test` | Tests unitarios (Vitest) |
+| `npm run test:watch` | Tests unitarios en modo watch |
+| `npm run e2e` | Tests e2e (Playwright, Chrome instalado, solo datos sintéticos) |
+| `npm run e2e:build` | Tests e2e contra el build de producción |
+<!-- /AUTO-GENERATED:npm -->
 
-## Convenciones de datos
+## Variables de entorno (`.env`)
 
-No se deben subir datos personales ni identificadores que permitan reidentificar individuos. La visualización debe trabajar con datos agregados y respetar las condiciones de uso y atribución de la fuente oficial.
+<!-- AUTO-GENERATED:env -->
+| Variable | Obligatoria | Descripción | Ejemplo |
+|---|---|---|---|
+| `MOBILITY_DIR` | sí | Carpeta de movilidad de Telefónica (subcarpetas YYYY-MM) | `/path/to/output_limite_legal` |
+| `TOURISM_DIR` | sí | Carpeta de turismo de Telefónica (subcarpetas YYYYMM) | `/path/to/output_limite_legal 2` |
+| `RENT_FILE` | no | Alquiler por barri y trimestre (pendiente de integrar) | `/path/to/rent_per_barri_quarter.csv` |
+| `POPULATION_FILE` | no | Residentes por barri y mes (pendiente de integrar) | `/path/to/population_per_barri_month.csv` |
+| `HUT_FILE` | no | Inventario de viviendas de uso turístico, 2025T2 (pendiente de integrar) | `/path/to/hut_inventory.csv` |
+| `MIGRATION_FILE` | no | Migración residencial anual, o "none" | `none` |
+| `CACHE_DIR` | no | Carpeta de la caché Parquet | `data/cache` |
+| `DUCKDB_MEMORY_LIMIT` | no | Memoria máxima de DuckDB | `6GB` |
+| `DUCKDB_TEMP_DIR` | no | Carpeta temporal de DuckDB (necesita espacio libre en disco) | `data/cache/duckdb_tmp` |
+| `DUCKDB_THREADS` | no | Hilos de DuckDB | `8` |
+| `FORCE_REBUILD` | no | 1 = ignorar la caché y reconstruir todo desde los CSV | `0` |
+<!-- /AUTO-GENERATED:env -->
+
+Las rutas solo viven en `.env` (nunca en el código).
+
+## Datos y confidencialidad (NDA)
+
+- Los datos de Telefónica **nunca** entran en Git: `data/`, `*.csv`, `*.parquet`, `*.xlsx` y `.env`
+  están ignorados. Solo se versionan datos públicos de referencia en `pipeline/reference/`.
+- La web solo recibe agregados por barri y mes; ningún valor exportado es menor de 15 (lo comprueba
+  `pipeline/export.py`). El export real (`web/public/data/`) también está ignorado.
+- Los tests y los e2e usan solo datos sintéticos (`web/public/sample/`).
+- En esta sesión no se pudo ejecutar AgentShield. Antes de cada push:
+  `npx --yes ecc-agentshield@1.6.0 scan --path .`
+
+## Contribuir
+
+- Una rama por tarea, commits pequeños (`feat:`, `fix:`, `test:`, `docs:`, `chore:`), revisión antes de
+  cada merge.
+- TDD: primero el test que falla, después el código. Evidencia del pipeline en `docs/tdd/`.
+- Antes de pedir revisión: `make lint`, `make test`, `cd web && npm test && npm run e2e`.
+- Lenguaje neutral en código, UI y docs ("visitants regionals", "retorn", "vincle amb el barri",
+  "canvi de residència"); sin afirmaciones causales ni políticas.
+- Documentación en castellano o catalán; código en inglés. Las tablas de este README se regeneran con
+  `python scripts/gen_docs.py`.
 
 ## Licencia
 
-El código de este repositorio se distribuye bajo la licencia MIT. Los datos de terceros mantienen la licencia indicada por su fuente original; consultad `data/README.md` o la ficha del dataset antes de redistribuirlos.
+Código bajo licencia MIT. Los datos de terceros mantienen la licencia de su fuente original.

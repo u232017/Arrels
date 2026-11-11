@@ -4,6 +4,14 @@
 **Fecha:** 2026-11-09 · **Entrega:** 2026-12-04 · **Complejidad:** Alta (15 GB de datos, 3 entregables)
 **Estado:** v2 — incorpora la revisión del agente `architect` (§9). Pendiente de aprobación del equipo ⛔
 
+## Estado a 2026-11-11
+
+| Hecho | Pendiente |
+|---|---|
+| T1–T6, T7a, T8 (+D3), T10–T16, T17 (sin serie de alquiler), T18–T23 | **T7b** (alquiler, población, HUT: faltan ficheros) · **T9** festes majors · verificar festivos (T6) · AgentShield |
+
+Detalle: `docs/SUMMARY.md`. Fuera del MVP: `docs/BACKLOG.md`.
+
 ## 1. Requisitos (resumen)
 
 - **Pipeline** Python 3.12 + DuckDB + Parquet: ingesta → estados de calidad (R1–R5) → agregados
