@@ -1,11 +1,12 @@
 PY := .venv/bin/python
 
-.PHONY: setup data test lint web notebook clean-cache
+.PHONY: setup data test lint web web-dev notebook clean-cache
 
 setup:
 	python3.12 -m venv .venv
 	$(PY) -m pip install -r requirements.txt
 	$(PY) -m pip install -e . --no-deps
+	cd web && npm ci --no-audit --no-fund
 
 data:
 	$(PY) -m pipeline.run
@@ -24,7 +25,10 @@ notebook:
 	$(PY) scripts/run_notebook.py
 
 web:
-	@test -d web && (cd web && npm ci && npm run build) || echo "web/ todavía no existe (Fase 5)"
+	cd web && npm run build
+
+web-dev:
+	cd web && npm run dev
 
 clean-cache:
 	rm -rf data/cache
