@@ -12,6 +12,6 @@ const check = (kind: string, doc: unknown) =>
 describe("synthetic sample matches the shared JSON contract", () => {
   const dir = join(root, "public", "sample");
   it("meta.json", () => expect(check("meta", JSON.parse(readFileSync(join(dir, "meta.json"), "utf8")))).toBe(true));
-  it.each(readdirSync(join(dir, "barri")))("barri/%s", (file) =>
+  it.each(readdirSync(join(dir, "barri")))("barri/%s", (file: string) =>
     expect(check("barri", JSON.parse(readFileSync(join(dir, "barri", file), "utf8")))).toBe(true));
 });

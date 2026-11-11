@@ -23,3 +23,10 @@ data/
 !pipeline/reference/*.csv
 .DS_Store
 *.egg-info/
+
+# Web
+node_modules/
+web/dist/
+web/test-results/
+web/playwright-report/
+web/coverage/
