@@ -20,7 +20,7 @@ from pipeline.ingest import (
     read_tourism,
 )
 from pipeline.quality import DAY_PARTIAL, build_calendar, missing_days
-from pipeline.sql import quote_literal
+from pipeline.sql import fetch_one, quote_literal
 
 logger = logging.getLogger("pipeline")
 CALENDAR_FAMILY = "barri_barri"  # smallest family; run() checks all three agree on gaps
@@ -55,7 +55,7 @@ def daily_totals_table(
 def calendar_from(
     con: duckdb.DuckDBPyConnection, daily: duckdb.DuckDBPyRelation
 ) -> duckdb.DuckDBPyRelation:
-    start, end = daily.aggregate("min(day), max(day)").fetchone()
+    start, end = fetch_one(daily.aggregate("min(day), max(day)"))
     return build_calendar(con, daily, start, end)
 
 
@@ -69,8 +69,8 @@ def write_indicators(
     barris = list(PILOTS)
     out = settings.cache_dir / "indicators"
     t9 = read_tourism(con, settings.tourism_dir, "visitantes_regionales_barrio_yearmon")
-    start, end = calendar.aggregate(
-        "date_trunc('month', min(day))::DATE, date_trunc('month', max(day))::DATE").fetchone()
+    start, end = fetch_one(calendar.aggregate(
+        "date_trunc('month', min(day))::DATE, date_trunc('month', max(day))::DATE"))
     write_parquet(con, visitors_monthly(con, t9, barris, start, end),
                   out / "visitors_monthly.parquet")
     write_parquet(con, visitors_by_home(con, t9, barris), out / "visitors_by_home.parquet")
@@ -109,10 +109,10 @@ def main() -> None:
         monthly_route_coverage(con, load_mobility(con, settings, "mun_barri"), calendar),
         settings.cache_dir / "route_coverage.parquet",
     )
-    negative = coverage.filter("days_absent < 0").count("*").fetchone()[0]
+    negative = fetch_one(coverage.filter("days_absent < 0").count("*"))[0]
     if negative:
         raise DataContractError(f"{negative} routes with negative days_absent")
-    logger.info("route coverage: %s rows", coverage.count("*").fetchone()[0])
+    logger.info("route coverage: %s rows", fetch_one(coverage.count("*"))[0])
     write_indicators(con, settings, calendar, coverage)
     logger.info("pipeline finished in %.0fs", time.time() - t0)
 

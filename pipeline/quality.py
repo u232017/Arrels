@@ -6,6 +6,8 @@ from datetime import date
 
 import duckdb
 
+from pipeline.sql import fetch_one
+
 # R2: three explicit states.
 PUBLISHED = "published"
 SUPPRESSED = "suppressed"  # mobility row with viajes = 0, meaning < 15 trips
@@ -32,7 +34,7 @@ def sub(rel: duckdb.DuckDBPyRelation) -> str:
 
 def families_of(rel: duckdb.DuckDBPyRelation) -> set[str]:
     """Families present in `rel` (min/max is enough: one value means one family)."""
-    lo, hi = rel.aggregate("min(family), max(family)").fetchone()
+    lo, hi = fetch_one(rel.aggregate("min(family), max(family)"))
     return {f for f in (lo, hi) if f is not None}
 
 

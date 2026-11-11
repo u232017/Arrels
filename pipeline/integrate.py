@@ -7,7 +7,7 @@ from collections.abc import Sequence
 
 import duckdb
 
-from pipeline.sql import quote_ident
+from pipeline.sql import fetch_one, quote_ident
 
 ALLOWED_HOW = {"left", "inner"}
 
@@ -17,7 +17,7 @@ class JoinIntegrityError(ValueError):
 
 
 def _totals(rel: duckdb.DuckDBPyRelation, measure: str) -> tuple[int, float | None]:
-    n, total = rel.aggregate(f"count(*), sum({quote_ident(measure)})").fetchone()
+    n, total = fetch_one(rel.aggregate(f"count(*), sum({quote_ident(measure)})"))
     return n, total
 
 
@@ -31,7 +31,7 @@ def assert_unique(rel: duckdb.DuckDBPyRelation, keys: Sequence[str], label: str)
     """Raise JoinIntegrityError if `keys` do not identify rows of `rel` uniquely."""
     key_list = ", ".join(quote_ident(k) for k in keys)
     dupes = rel.aggregate(f"{key_list}, count(*) AS n", key_list).filter("n > 1")
-    if dupes.count("*").fetchone()[0]:
+    if fetch_one(dupes.count("*"))[0]:
         raise JoinIntegrityError(f"{label} keys {list(keys)} are not unique")
 
 

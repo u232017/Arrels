@@ -14,7 +14,7 @@ import duckdb
 from pipeline.cache import fingerprint, is_fresh, write_manifest
 from pipeline.config import Settings
 from pipeline.quality import PUBLISHED
-from pipeline.sql import quote_literal
+from pipeline.sql import fetch_one, quote_literal
 
 logger = logging.getLogger(__name__)
 
@@ -74,11 +74,11 @@ def validate_mobility(rel: duckdb.DuckDBPyRelation, family: str) -> None:
         "barri_barri": "barrio_origen IS NULL OR barrio_destino IS NULL",
         "municipal": "FALSE",
     }[family]
-    bad_day, bad_viajes, bad_barri = rel.aggregate(f"""
+    bad_day, bad_viajes, bad_barri = fetch_one(rel.aggregate(f"""
         count(*) FILTER (WHERE day IS NULL),
         count(*) FILTER (WHERE viajes IS NULL OR viajes < 0
                          OR viajes BETWEEN 1 AND {PROVIDER_THRESHOLD - 1}),
-        count(*) FILTER (WHERE {barri_check})""").fetchone()
+        count(*) FILTER (WHERE {barri_check})"""))
     problems = []
     if bad_day:
         problems.append(f"{bad_day} rows with an invalid day")
@@ -116,10 +116,10 @@ def read_tourism(
           TRY_CAST(visitantes AS BIGINT) AS visitantes,
           '{PUBLISHED}' AS state
         FROM {_csv_source(files, delim=";")}""")
-    bad = rel.aggregate(
+    bad = fetch_one(rel.aggregate(
         f"count(*) FILTER (WHERE month IS NULL OR visitantes IS NULL "
         f"OR visitantes < {PROVIDER_THRESHOLD})"
-    ).fetchone()[0]
+    ))[0]
     if bad:
         raise DataContractError(
             f"{table}: {bad} rows with an invalid month or visitantes < {PROVIDER_THRESHOLD}"

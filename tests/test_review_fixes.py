@@ -121,3 +121,16 @@ class TestHolidayFile:
         bad.write_text("day,scope,name_ca,source\n2024-01-01,ES,a,s\n2024-01-01,CAT,b,s\n")
         with pytest.raises(ValueError, match="duplicate"):
             load_holidays(con, bad)
+
+
+class TestFetchOne:
+    def test_returns_the_row(self, con):
+        from pipeline.sql import fetch_one
+
+        assert fetch_one(con.sql("SELECT 1, 2")) == (1, 2)
+
+    def test_empty_result_fails_clearly(self, con):
+        from pipeline.sql import fetch_one
+
+        with pytest.raises(LookupError, match="no rows"):
+            fetch_one(con.sql("SELECT 1 WHERE false"))

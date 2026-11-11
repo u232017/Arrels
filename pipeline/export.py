@@ -19,6 +19,7 @@ from jsonschema import Draft202012Validator
 
 from pipeline.ingest import PROVIDER_THRESHOLD
 from pipeline.quality import ABSENT, PUBLISHED
+from pipeline.sql import fetch_one
 
 logger = logging.getLogger(__name__)
 
@@ -228,21 +229,28 @@ def sample_payloads() -> tuple[Json, list[Json]]:
     barris = []
     for k, (code, name) in enumerate(SAMPLE_PILOTS):
         base = 1000 * (k + 1)
-        visitors = []
-        for i, m in enumerate(months):
-            absent = k == 2 and i == 5  # one absent month to exercise the UI
-            v = None if absent else base + 37 * i + (200 if m.month in (7, 8) else 0)
-            visitors.append({"month": m, "visitors": v,
-                             "state": ABSENT if absent else PUBLISHED, "yoy": None})
-        by_month = {r["month"]: r["visitors"] for r in visitors}
-        for r in visitors:
-            prev = by_month.get(date(BASE_YEAR, r["month"].month, 1))
-            if r["month"].year > BASE_YEAR and r["visitors"] and prev:
-                r["yoy"] = (r["visitors"] - prev) / prev
-        weekend = [{"month": m, "weekend_share": 0.17 + 0.01 * k + (0.03 if m.month == 8 else 0),
-                    "n_routes": 100 + k, "route_days_published": 70,
-                    "route_days_suppressed": 28, "route_days_absent": 2} for m in months]
-        homes = [{"month": m, "home": c, "home_name": n, "visitors": 100 * (3 - j) + k}
+        counts: dict[date, int | None] = {
+            m: None if (k == 2 and i == 5)  # one absent month to exercise the UI
+            else base + 37 * i + (200 if m.month in (7, 8) else 0)
+            for i, m in enumerate(months)
+        }
+
+        def yoy(m: date, v: int | None) -> float | None:
+            prev = counts.get(date(BASE_YEAR, m.month, 1))  # noqa: B023 (used inside the loop)
+            return (v - prev) / prev if m.year > BASE_YEAR and v and prev else None
+
+        visitors: list[Row] = [
+            {"month": m, "visitors": v, "state": PUBLISHED if v is not None else ABSENT,
+             "yoy": yoy(m, v)}
+            for m, v in counts.items()
+        ]
+        weekend: list[Row] = [
+            {"month": m, "weekend_share": 0.17 + 0.01 * k + (0.03 if m.month == 8 else 0),
+             "n_routes": 100 + k, "route_days_published": 70,
+             "route_days_suppressed": 28, "route_days_absent": 2}
+            for m in months
+        ]
+        homes: list[Row] = [{"month": m, "home": c, "home_name": n, "visitors": 100 * (3 - j) + k}
                  for m in months for j, (c, n, _, _) in enumerate(SAMPLE_HOMES)]
         holidays = {"2023-09": ["La Mercè"], "2024-09": ["La Mercè"], "2024-12": ["Nadal"]}
         barris.append(barri_payload(code, name, visitors, weekend, homes, holidays, centroids))
@@ -317,8 +325,8 @@ def export_real(con: Any, cache_dir: Path, out_dir: Path = WEB_DATA_DIR) -> int:
         for code, name in PILOTS.items()
     ]
     cal = con.read_parquet(str(calendar))
-    start, end = cal.aggregate(
-        "strftime(min(day), '%Y-%m'), strftime(max(day), '%Y-%m')").fetchone()
+    start, end = fetch_one(cal.aggregate(
+        "strftime(min(day), '%Y-%m'), strftime(max(day), '%Y-%m')"))
 
     def days(status: str) -> list[str]:
         rel = cal.filter(f"day_status = '{status}'").project("day").order("day")

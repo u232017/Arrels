@@ -16,6 +16,8 @@ test:
 
 lint:
 	$(PY) -m ruff check pipeline tests scripts
+	$(PY) -m mypy pipeline --ignore-missing-imports
+	cd web && npx tsc -b --noEmit
 
 notebook:
 	$(PY) scripts/build_notebook.py
