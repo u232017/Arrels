@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://barrilab.example/arrels.schema.json",
+  "title": "Arrels MVP static data",
+  "description": "Contract between pipeline/export.py and web/. Fields marked x-count hold counts and must be >= 15 when published.",
+  "$defs": {
+    "state": { "enum": ["published", "suppressed", "absent"] },
+    "month": { "type": "string", "pattern": "^\\d{4}-\\d{2}$" },
+    "badge": {
+      "type": "object",
+      "required": ["window", "pct_published", "pct_suppressed", "pct_absent"],
+      "properties": {
+        "window": { "type": "string" },
+        "pct_published": { "type": "number", "minimum": 0, "maximum": 100 },
+        "pct_suppressed": { "type": "number", "minimum": 0, "maximum": 100 },
+        "pct_absent": { "type": "number", "minimum": 0, "maximum": 100 },
+        "n_routes": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "value": {
+      "type": "object",
+      "required": ["value", "state", "badge"],
+      "properties": {
+        "value": { "type": ["number", "null"] },
+        "state": { "$ref": "#/$defs/state" },
+        "badge": { "$ref": "#/$defs/badge" }
+      },
+      "additionalProperties": false
+    },
+    "countValue": { "$ref": "#/$defs/value", "x-count": true },
+    "home": {
+      "type": "object",
+      "required": ["code", "name", "visitors"],
+      "properties": {
+        "code": { "type": "string" },
+        "name": { "type": "string" },
+        "visitors": { "type": "integer", "minimum": 15, "x-count": true },
+        "lat": { "type": ["number", "null"] },
+        "lon": { "type": ["number", "null"] }
+      },
+      "additionalProperties": false
+    },
+    "barriMonth": {
+      "type": "object",
+      "required": ["month", "visitors", "yoy", "weekend_share", "holidays"],
+      "properties": {
+        "month": { "$ref": "#/$defs/month" },
+        "visitors": { "$ref": "#/$defs/countValue" },
+        "yoy": { "$ref": "#/$defs/value" },
+        "weekend_share": { "$ref": "#/$defs/value" },
+        "holidays": { "type": "array", "items": { "type": "string" } },
+        "homes": { "type": "array", "items": { "$ref": "#/$defs/home" } }
+      },
+      "additionalProperties": false
+    },
+    "barri": {
+      "type": "object",
+      "required": ["code", "name", "months", "context"],
+      "properties": {
+        "code": { "type": "string", "pattern": "^\\d{9}$" },
+        "name": { "type": "string" },
+        "months": { "type": "array", "items": { "$ref": "#/$defs/barriMonth" } },
+        "context": {
+          "type": "object",
+          "required": ["rent", "residents", "hut_per_1000"],
+          "properties": {
+            "rent": { "$ref": "#/$defs/value" },
+            "residents": { "$ref": "#/$defs/countValue" },
+            "hut_per_1000": { "$ref": "#/$defs/value" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "meta": {
+      "type": "object",
+      "required": ["generated", "window", "threshold", "pilots", "missing_days", "partial_days"],
+      "properties": {
+        "generated": { "type": "string" },
+        "window": {
+          "type": "object",
+          "required": ["start", "end"],
+          "properties": { "start": { "$ref": "#/$defs/month" }, "end": { "$ref": "#/$defs/month" } },
+          "additionalProperties": false
+        },
+        "threshold": { "type": "integer" },
+        "pilots": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["code", "name"],
+            "properties": { "code": { "type": "string" }, "name": { "type": "string" } },
+            "additionalProperties": false
+          }
+        },
+        "missing_days": { "type": "array", "items": { "type": "string" } },
+        "partial_days": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    }
+  }
+}
