@@ -171,3 +171,14 @@ def test_home_names_put_the_article_first(raw, nice):
     from pipeline.export import display_name
 
     assert display_name(raw) == nice
+
+
+def test_default_export_keeps_every_published_home_town():
+    rows = [
+        {"month": date(2024, 2, 1), "home": f"08{i:03d}", "home_name": f"M{i}", "visitors": 15 + i}
+        for i in range(60)
+    ]
+    payload = _payload(home_rows=rows, top_homes=None)
+    homes = _month(payload, "2024-02")["homes"]
+    assert len(homes) == 60
+    assert OTHER_HOMES_CODE not in {h["code"] for h in homes}

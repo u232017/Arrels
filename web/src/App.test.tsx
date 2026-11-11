@@ -16,11 +16,14 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("App", () => {
-  it("loads the first pilot barri with KPI cards and badges", async () => {
+  it("loads the first pilot barri with KPI cards, each with coverage info, and no empty card", async () => {
     render(<App dataDir="sample" />);
     expect(await screen.findByRole("heading", { level: 2, name: "Barri de mostra A" })).toBeInTheDocument();
     const kpis = screen.getByRole("region", { name: "Indicadors" });
-    expect(within(kpis).getAllByTestId("coverage-badge").length).toBeGreaterThanOrEqual(6);
+    const cards = within(kpis).getAllByRole("article");
+    expect(cards).toHaveLength(3); // rent, residents and HUT are absent in the sample -> hidden
+    expect(within(kpis).getAllByTestId("coverage-badge")).toHaveLength(3);
+    expect(kpis).not.toHaveTextContent("Sense dada");
   });
 
   it("switches barri", async () => {

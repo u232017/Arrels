@@ -92,11 +92,21 @@ describe("App robustness", () => {
     }
   });
 
-  it("names the month behind the change vs the base year", async () => {
+  it("labels the change as the selected months vs the same months a year earlier", async () => {
     stub(async (url) => ok(read(url.replace(/^[^/]+\//, ""))));
     render(<App dataDir="sample" />);
-    const card = await screen.findByRole("article", { name: /canvi respecte/i });
-    expect(card).toHaveTextContent(/agost 2025/);
+    const card = await screen.findByRole("article", { name: /canvi vs any anterior/i });
+    expect(card).toHaveTextContent("vs mateixos mesos de l'any anterior");
+    expect(card).toHaveTextContent("2024-09 – 2025-08 vs 2023-09 – 2024-08");
+  });
+
+  it("hides the change when the previous-year months do not exist", async () => {
+    stub(async (url) => ok(read(url.replace(/^[^/]+\//, ""))));
+    render(<App dataDir="sample" />);
+    await screen.findByRole("article", { name: /canvi vs any anterior/i });
+    await userEvent.selectOptions(screen.getByLabelText("Des de"), "2023-01");
+    await userEvent.selectOptions(screen.getByLabelText("Fins a"), "2023-12");
+    await waitFor(() => expect(screen.queryByRole("article", { name: /canvi vs any anterior/i })).not.toBeInTheDocument());
   });
 });
 

@@ -38,8 +38,36 @@ function valueOrAbsent(value: number | null, badge: Badge): Value {
 
 export interface Summary {
   visitors: Value;
-  yoy: Value;
   weekendShare: Value;
+}
+
+/** "2025-01" shifted by `years` whole years. */
+export function shiftYear(ym: string, years: number): string {
+  return `${Number(ym.slice(0, 4)) + years}${ym.slice(4)}`;
+}
+
+const absentWith = (window: string): Value => ({
+  value: null, state: "absent", badge: { window, pct_published: 0, pct_suppressed: 0, pct_absent: 100 },
+});
+
+/**
+ * Change of the period's mean monthly visitors vs the mean of the same calendar months one year
+ * earlier. Absent unless every selected and every previous-year month has a published value.
+ */
+export function periodChange(all: BarriMonth[], from: string, to: string): Value {
+  const prevFrom = shiftYear(from, -1);
+  const prevTo = shiftYear(to, -1);
+  const window = `${from} – ${to} vs ${prevFrom} – ${prevTo}`;
+  const current = inRange(all, from, to).map((m) => m.visitors);
+  const byMonth = new Map(all.map((m) => [m.month, m.visitors]));
+  const previous = inRange(all, from, to).map((m) => byMonth.get(shiftYear(m.month, -1)));
+  const complete = (vs: (Value | undefined)[]): vs is PublishedValue[] =>
+    vs.length > 0 && vs.every((x) => x !== undefined && isPublished(x));
+  if (!complete(current) || !complete(previous)) return absentWith(window);
+  const base = mean(previous.map((x) => x.value));
+  if (base === 0) return absentWith(window);
+  const value = mean(current.map((x) => x.value)) / base - 1;
+  return { value, state: "published", badge: { window, pct_published: 100, pct_suppressed: 0, pct_absent: 0 } };
 }
 
 /** KPI values for a month range. Unique visitors are averaged per month, never summed. */
@@ -47,15 +75,10 @@ export function summarise(months: BarriMonth[]): Summary {
   const window = windowOf(months);
   const visitors = months.map((m) => m.visitors);
   const vis = published(visitors);
-
-  const lastYoy = [...months].reverse().find((m) => m.yoy.state === "published" && m.yoy.value !== null);
-
   const weekend = months.map((m) => m.weekend_share);
   const we = published(weekend);
-
   return {
     visitors: valueOrAbsent(vis.length ? mean(vis) : null, monthShareBadge(visitors, window)),
-    yoy: lastYoy ? lastYoy.yoy : valueOrAbsent(null, monthShareBadge([], window)),
     weekendShare: valueOrAbsent(we.length ? mean(we) : null, meanBadge(weekend, window)),
   };
 }

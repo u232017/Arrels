@@ -18,8 +18,8 @@ export function MethodSection({ meta }: { meta: Meta }) {
         <li>Cada valor porta la seva <strong>finestra</strong> i el percentatge publicat, &lt;15 i sense fila.</li>
         <li>Els visitants únics d'un període són la <strong>mitjana mensual</strong>: sumar mesos comptaria la mateixa persona diverses vegades.</li>
         <li>La quota de cap de setmana fa servir mitjanes per dia vàlid (sense dies que falten, parcials ni festius).</li>
-        <li>"Visitants regionals" són persones d'altres municipis de Catalunya que no hi passen la nit: inclou desplaçaments per feina o estudis.</li>
-        <li>Lloguer, residents i habitatges d'ús turístic: pendents d'integrar.</li>
+        <li>"Visitants regionals" són residents d'altres municipis de la província de Barcelona que no hi passen la nit: inclou desplaçaments per feina o estudis.</li>
+        <li>Lloguer, residents i habitatges d'ús turístic: encara no disponibles; les targetes s'amaguen fins que hi hagi dades.</li>
       </ul>
       <p className="method__window">Finestra de dades: {meta.window.start} – {meta.window.end}. Llindar del proveïdor: {meta.threshold}.</p>
     </section>

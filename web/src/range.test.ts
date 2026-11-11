@@ -34,7 +34,6 @@ describe("summarise", () => {
     expect(s.visitors.badge.pct_absent).toBeCloseTo(33.3, 1);
     expect(s.visitors.badge.window).toBe("2024-01 – 2024-03");
   });
-  it("takes the change vs 2023 of the last month with a value", () => expect(s.yoy.value).toBe(0.2));
   it("averages the weekend share over published months", () => expect(s.weekendShare.value).toBeCloseTo(0.25));
   it("averages route-day shares and routes in the weekend badge", () => {
     expect(s.weekendShare.badge.n_routes).toBe(100);

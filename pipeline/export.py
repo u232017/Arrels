@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 SCHEMA_PATH = Path(__file__).resolve().parent.parent / "contract" / "arrels.schema.json"
 SIZE_LIMIT_BYTES = 5 * 1024 * 1024
-TOP_HOMES = 40
+TOP_HOMES: int | None = None  # None = every published home town (each already >= 15)
 OTHER_HOMES_CODE = "ALTRES"
 OTHER_HOMES_NAME = "Altres municipis"
 PENDING_WINDOW = "pendent"
@@ -117,9 +117,11 @@ def display_name(name: str) -> str:
     return f"{article}{base}" if article.endswith("'") else f"{article} {base}"
 
 
-def _homes(rows: list[Row], centroids: Mapping[str, tuple[float, float]], top: int) -> list[Json]:
+def _homes(
+    rows: list[Row], centroids: Mapping[str, tuple[float, float]], top: int | None
+) -> list[Json]:
     ranked = sorted(rows, key=lambda r: (-r["visitors"], r["home"]))
-    head, rest = ranked[:top], ranked[top:]
+    head, rest = (ranked, []) if top is None else (ranked[:top], ranked[top:])
 
     def home(code: str, name: str, visitors: int) -> Json:
         lat, lon = centroids.get(code, (None, None))
@@ -147,7 +149,7 @@ def barri_payload(
     home_rows: Iterable[Row],
     holidays_by_month: Mapping[str, list[str]],
     centroids: Mapping[str, tuple[float, float]] | None = None,
-    top_homes: int = TOP_HOMES,
+    top_homes: int | None = TOP_HOMES,
 ) -> Json:
     """The JSON document for one pilot barri."""
     weekend = {r["month"]: r for r in weekend_rows}

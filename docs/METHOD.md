@@ -50,7 +50,7 @@ día cuenta si tiene fila, aunque esté suprimida). Para contar visitantes se us
 
 > **V(barri, mes) = suma de `visitantes` de Tabla 9 de todos los municipios de residencia.**
 
-En palabras: cuántas personas distintas que viven en otros municipios de Cataluña visitaron el
+En palabras: cuántas personas distintas que viven en otros municipios de la provincia de Barcelona visitaron el
 barri ese mes, sin pasar la noche. Se suman municipios (cada persona vive en uno solo), pero
 **nunca se suman meses**: la misma persona puede volver cada mes y se contaría dos veces. Para
 un rango de meses se muestra la serie o la media mensual.
@@ -58,13 +58,13 @@ un rango de meses se muestra la serie o la media mensual.
 También se muestra **por municipio de residencia** (mapa y lista). Los visitantes con residencia
 desconocida (`NA`, ~0,5 %) aparecen en la lista como "Residència desconeguda", sin punto en el mapa.
 
-### Canvi respecte al mateix mes de 2023
+### Canvi vs any anterior
 
-> **Canvi = (V(mes) − V(mismo mes de 2023)) / V(mismo mes de 2023)**
+> **Canvi = media(V de los meses elegidos) / media(V de los mismos meses un año antes) − 1**
 
-En palabras: cuánto ha subido o bajado respecto al mismo mes de 2023, en porcentaje. Comparar con
-el mismo mes evita confundir estacionalidad (agosto, Navidad) con cambio. Vacío en 2023 y si
-falta el mes base.
+En palabras: cuánto ha subido o bajado la media mensual del periodo elegido respecto a los mismos
+meses del año anterior. Comparar los mismos meses evita confundir estacionalidad (agosto, Navidad)
+con cambio. Se oculta si falta alguno de esos meses (por ejemplo, para periodos de 2023).
 
 ### Quota de cap de setmana (viajes regionales)
 
@@ -106,7 +106,8 @@ evidencia en `docs/PILOT_CANDIDATES.md`. Elegidos (D3): la Dreta de l'Eixample, 
 
 ## 6. Limitaciones
 
-- **"Visitants regionals" incluye movilidad por trabajo o estudio** (Tabla 9 = excursionistas, sin
+- **"Visitants regionals" son residentes de otros municipios de la provincia de Barcelona** (todos
+  los códigos de residencia empiezan por 08) e incluye movilidad por trabajo o estudio (Tabla 9 = excursionistas, sin
   pernoctación). No mide por sí solo un vínculo personal con el barri.
 - Los valores por debajo de 15 no se conocen; en la quota de fin de semana cuentan como 0.
 - Las fechas de festivos están por verificar con el DOGC; las festes majors están pendientes (T9).

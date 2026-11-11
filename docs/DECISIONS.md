@@ -28,6 +28,19 @@ Registro de decisiones del equipo. Cada entrada: fecha, decisión, motivo, impac
   con una pérdida de puntuación de solo 0,02. Combina perfiles central y residencial.
 - **Impacto:** indicadores, notebook y web solo para estos tres barris.
 
+## D4 — Indicadores del periodo elegido (2026-11-11)
+
+- **Cambio:** media de los meses elegidos vs media de los mismos meses un año antes; se oculta si
+  falta algún mes. Sustituye al cambio "último mes vs mismo mes de 2023".
+- **Mapa y ranking:** media mensual por municipio en el periodo elegido; los meses en que un
+  municipio no aparece (<15) cuentan como desconocidos, no como 0.
+- **Tarjetas sin datos:** se ocultan (nunca una tarjeta vacía).
+
+## D5 — Exportar todos los municipios de residencia (2026-11-11)
+
+- **Decisión:** el JSON incluye todos los municipios publicados (≥15) por barri y mes, no solo los
+  40 primeros. Export real: ~2,0 MB (límite 5 MB).
+
 ## Pendientes
 
 - `cod_municipio_residencia = "NA"` en Tabla 9. Propuesta por defecto: mostrar como
