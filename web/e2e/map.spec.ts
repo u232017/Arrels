@@ -7,8 +7,9 @@ test("residence map loads its worker and draws without falling back", async ({ p
   const errors: string[] = [];
   page.on("console", (msg) => { if (msg.type() === "error") errors.push(msg.text()); });
   page.on("pageerror", (err) => errors.push(err.message));
-  await page.route("**/tiles.openfreemap.org/styles/**", (r) => r.fulfill({ json: STYLE }));
+  // Playwright gives the most recently added route priority: block everything, then allow the style.
   await page.route("**/tiles.openfreemap.org/**", (r) => r.abort());
+  await page.route("**/tiles.openfreemap.org/styles/**", (r) => r.fulfill({ json: STYLE }));
 
   await page.goto("/");
   const map = page.getByRole("img", { name: /mapa dels municipis/i });

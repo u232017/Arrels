@@ -33,3 +33,4 @@ web/coverage/
 .coverage
 htmlcov/
 *.tsbuildinfo
+web/dist-e2e/

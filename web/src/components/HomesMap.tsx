@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Home } from "../types";
+// MapLibre 6 runs its renderer in a separate worker file; let Vite bundle it with its imports.
+import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 
 // Free basemap without API key (OpenFreeMap). If it fails, the ranked list still works.
 const STYLE_URL = "https://tiles.openfreemap.org/styles/positron";
@@ -21,7 +23,8 @@ export function HomesMap({ homes }: { homes: Home[] }) {
     let map: { remove: () => void } | undefined;
     let cancelled = false;
     import("maplibre-gl")
-      .then(async ({ Map: MaplibreMap }) => {
+      .then(async ({ Map: MaplibreMap, setWorkerUrl }) => {
+        setWorkerUrl(workerUrl);
         await import("maplibre-gl/dist/maplibre-gl.css");
         if (cancelled || !ref.current) return;
         const max = Math.max(...points.map((p) => p.visitors));

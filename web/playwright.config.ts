@@ -1,6 +1,10 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const PORT = 5174;
+// E2E_BUILD=1 tests the production build (vite build + preview) instead of the dev server.
+const SERVER = process.env.E2E_BUILD
+  ? `npx vite build --outDir dist-e2e && npx vite preview --outDir dist-e2e --port ${PORT} --strictPort`
+  : `npx vite --port ${PORT} --strictPort`;
 
 export default defineConfig({
   testDir: "./e2e",
@@ -19,10 +23,10 @@ export default defineConfig({
     { name: "phone", use: { ...devices["Pixel 7"], channel: "chrome" } },
   ],
   webServer: {
-    command: `npx vite --port ${PORT} --strictPort`,
+    command: SERVER,
     env: { VITE_DATA_DIR: "sample" }, // synthetic data only, never the NDA export
     url: `http://localhost:${PORT}`,
     reuseExistingServer: false, // never reuse a dev server that may serve the real export
-    timeout: 60_000,
+    timeout: 120_000,
   },
 });

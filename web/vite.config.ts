@@ -6,6 +6,7 @@ export default defineConfig({
   plugins: [react()],
   base: "./",
   server: { fs: { allow: [".."] } },
+  worker: { format: "es" },
   test: {
     environment: "jsdom",
     globals: true,
