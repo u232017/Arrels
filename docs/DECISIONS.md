@@ -12,10 +12,15 @@ Registro de decisiones del equipo. Cada entrada: fecha, decisión, motivo, impac
   En las rutas filtradas, los días suprimidos cuentan como `<15` (no como 0) y se informa de su
   proporción en la insignia de cobertura.
 
+## D2 — Días parciales (2026-11-11, propuesta por defecto aplicada; confirmar en la reunión)
+
+- **Decisión:** un día es `partial` si está junto a un día faltante y su total de viajes es
+  < 50 % de la mediana de su mismo día de la semana. Se excluyen de los indicadores diarios.
+- **Resultado con datos reales:** 2025-04-12, 2025-05-19, 2025-05-21 (los festivos con volumen
+  bajo, como 15-ago o 25-dic, no se marcan porque no están junto a un hueco).
+
 ## Pendientes
 
-- Días parciales junto a los huecos (2025-04-12, 2025-05-19, 2025-05-21): ¿marcar como `partial`?
-  Propuesta por defecto: sí, se marcan y se excluyen de los indicadores diarios.
 - `cod_municipio_residencia = "NA"` en Tabla 9. Propuesta por defecto: mostrar como
   "residència desconeguda" en la lista, sin punto en el mapa.
 - Barris piloto (Fase 3).
