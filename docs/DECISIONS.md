@@ -19,8 +19,17 @@ Registro de decisiones del equipo. Cada entrada: fecha, decisión, motivo, impac
 - **Resultado con datos reales:** 2025-04-12, 2025-05-19, 2025-05-21 (los festivos con volumen
   bajo, como 15-ago o 25-dic, no se marcan porque no están junto a un hueco).
 
+## D3 — Barris piloto (2026-11-11)
+
+- **Decisión:** la Dreta de l'Eixample (080190203), Sants (080190308), Sant Andreu (080190904).
+- **Motivo:** puntuación de suficiencia #1, #2 y #7 (0,923 / 0,858 / 0,837; ver
+  `docs/PILOT_CANDIDATES.md`). Se prefiere Sant Andreu a la Marina del Prat Vermell (#3) por ser
+  residencial y más interpretable (la Marina incluye la Zona Franca y tiene pocos residentes),
+  con una pérdida de puntuación de solo 0,02. Combina perfiles central y residencial.
+- **Impacto:** indicadores, notebook y web solo para estos tres barris.
+
 ## Pendientes
 
 - `cod_municipio_residencia = "NA"` en Tabla 9. Propuesta por defecto: mostrar como
   "residència desconeguda" en la lista, sin punto en el mapa.
-- Barris piloto (Fase 3): candidatos y evidencia en `docs/PILOT_CANDIDATES.md`. ⛔ decide el equipo (D3).
+- Festes majors de los barris piloto (T9, BR): fechas exactas 2023–2025 por verificar.
