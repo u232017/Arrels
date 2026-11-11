@@ -37,7 +37,7 @@ make web-dev               # página en http://localhost:5173
 | # | Problema | Severidad | Estado |
 |---|---|---|---|
 | I1 | La copia de movilidad en `data/raw/output_limite_legal` estaba vacía (copia fallida); se usa la de `~/Downloads` vía `.env` | Media | Resuelto (ruta en `.env`) |
-| I2 | Ficheros de alquiler, población y HUT no localizados; cifras de enlace del enunciado sin verificar | Alta | **Abierto** (B1) |
+| I2 | Ficheros de alquiler, población y HUT del equipo no localizados | Alta | Resuelto con fuentes públicas (D6); las cifras de enlace del equipo (95,33 %) siguen sin verificar |
 | I3 | Días parciales junto a los 3 días sin datos (2025-04-12, 2025-05-19, 2025-05-21) | Media | Resuelto (D2, pendiente de confirmar) |
 | I4 | El 62 % de R5 solo se reproduce contando días con fila (incl. suprimidas); con días publicados sería 14,5 % | Media | Resuelto (D1) |
 | I5 | El limpiador antiguo `clean_data.py` convertía `08019` en 8019 y `-` en null | Alta | Resuelto (retirado) |

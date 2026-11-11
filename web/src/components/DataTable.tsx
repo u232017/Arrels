@@ -17,6 +17,7 @@ export function DataTable({ months, all, baseYear }: { months: BarriMonth[]; all
             <th scope="col" className="py-2 pr-4 font-medium">Visitants regionals</th>
             <th scope="col" className="py-2 pr-4 font-medium">Mateix mes, {baseYear}</th>
             <th scope="col" className="py-2 pr-4 font-medium">Quota de cap de setmana</th>
+            <th scope="col" className="py-2 pr-4 font-medium">Lloguer €/m²</th>
             <th scope="col" className="py-2 pr-4 font-medium">Festius</th>
             <th scope="col" className="py-2 font-medium">Cobertura</th>
           </tr>
@@ -28,6 +29,7 @@ export function DataTable({ months, all, baseYear }: { months: BarriMonth[]; all
               <td className="py-2 pr-4 tabular-nums">{m.visitors.value === null ? "Sense dada" : num(m)}</td>
               <td className="py-2 pr-4 tabular-nums">{num(base.get(m.month.slice(5)))}</td>
               <td className="py-2 pr-4 tabular-nums">{m.weekend_share.value === null ? "Sense dada" : formatPct(m.weekend_share.value)}</td>
+              <td className="py-2 pr-4 tabular-nums">{m.rent?.value != null ? m.rent.value.toFixed(1).replace(".", ",") : "—"}</td>
               <td className="py-2 pr-4">{m.holidays.join(", ")}</td>
               <td className="py-2 text-caption text-text-2">
                 <span className="block">Visitants: {coverageText(m.visitors)}</span>

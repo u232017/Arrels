@@ -10,6 +10,7 @@ import duckdb
 
 from pipeline.aggregate import monthly_route_coverage
 from pipeline.config import Settings, connect, load_settings
+from pipeline.context import load_hut, load_population, load_rent, with_context
 from pipeline.holidays import load_holidays, with_holiday_flags
 from pipeline.indicators import PILOTS, visitors_by_home, visitors_monthly, weekend_share
 from pipeline.ingest import (
@@ -77,7 +78,24 @@ def write_indicators(
     mobility = load_mobility(con, settings, "mun_barri")
     write_parquet(con, weekend_share(con, mobility, coverage, calendar, barris),
                   out / "weekend_share.parquet")
+    write_context(con, settings, out)
     logger.info("indicators written to %s", out)
+
+
+def write_context(con: duckdb.DuckDBPyConnection, settings: Settings, out: Path) -> None:
+    """T7b: rent, residents and HUT per pilot barri and month, joined with checked_join (R4)."""
+    if settings.population_file is None or settings.hut_file is None or settings.rent_file is None:
+        logger.warning("context files not configured: rent/residents/HUT cards stay hidden")
+        (out / "context_monthly.parquet").unlink(missing_ok=True)
+        return
+    pad = (sorted(settings.population_file.glob("*_pad_mdbas.csv"))
+           if settings.population_file.is_dir() else [settings.population_file])
+    visitors = con.read_parquet(str(out / "visitors_monthly.parquet"))
+    monthly = visitors.project("barri, month, visitors")
+    ctx = with_context(con, monthly, load_rent(con, settings.rent_file),
+                       load_population(con, pad, PILOTS), load_hut(con, settings.hut_file, PILOTS))
+    write_parquet(con, ctx, out / "context_monthly.parquet")
+    logger.info("context (rent, residents, HUT) joined for %d barris", len(PILOTS))
 
 
 def main() -> None:

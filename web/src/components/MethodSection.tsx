@@ -20,7 +20,7 @@ export function MethodSection({ meta }: { meta: Meta }) {
         <li>El canvi compara la mitjana dels mesos triats amb la dels mateixos mesos de l'any anterior.</li>
         <li>La quota de cap de setmana fa servir mitjanes per dia vàlid (sense dies que falten, parcials ni festius). Si tots els dies tinguessin els mateixos viatges seria 28,6 %.</li>
         <li>El punt de color indica la cobertura: verd publicat, taronja parcialment &lt;15, gris sense dada. El detall és al requadre emergent i a la taula.</li>
-        <li>Lloguer, residents i habitatges d'ús turístic: encara no disponibles; les targetes s'amaguen fins que hi hagi dades.</li>
+        <li>Lloguer: preu mitjà per m² dels contractes amb fiança dipositada a l'Incasòl (trimestral). Residents: padró municipal a 1 de gener. HUT: registre d'habitatges d'ús turístic del 2n trimestre de 2025. Si un valor falta, la targeta no es mostra.</li>
       </ul>
       <p className="m-0 text-caption text-text-2">Finestra de dades: {meta.window.start} – {meta.window.end}. Llindar del proveïdor: {meta.threshold}.</p>
     </div>

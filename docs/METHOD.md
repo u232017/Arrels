@@ -11,9 +11,9 @@
 | Telefónica turismo, Tabla 9 | Visitantes regionales únicos por barri, mes y municipio de residencia | 2023-01 → 2025-08 (mensual) | ✅ |
 | Festivos ES / CAT / BCN | Marcas diarias y mensuales | 2023 → 2025 | ✅ (fechas por verificar, T6) |
 | Capitales de municipio georreferenciadas (Generalitat, ICGC) | Punto de cada municipio en el mapa | — | ✅ `pipeline/reference/municipality_centroids.csv` |
-| Alquiler por barri y trimestre | Contexto | 2023T1 → 2025T2 | ⏳ fichero pendiente |
-| Población por barri y mes | Contexto | 2023-01 → 2025-08 | ⏳ fichero pendiente |
-| HUT (viviendas de uso turístico) | Contexto | solo 2025T2 | ⏳ fichero pendiente |
+| Alquiler €/m² por barri y trimestre (Incasòl, vía Barcelona Dades) | Tarjeta de lloguer | 2023T1 → 2025T4 | ✅ |
+| Padró por barri (1 de enero) | Residents, HUT por 1.000 | 2023, 2024, 2025 | ✅ (anual) |
+| HUT (registro de viviendas de uso turístico) | HUT por 1.000 residents | 2025T2 | ✅ |
 
 Cada valor de la web muestra su ventana al lado.
 
@@ -111,6 +111,6 @@ evidencia en `docs/PILOT_CANDIDATES.md`. Elegidos (D3): la Dreta de l'Eixample, 
   pernoctación). No mide por sí solo un vínculo personal con el barri.
 - Los valores por debajo de 15 no se conocen; en la quota de fin de semana cuentan como 0.
 - Las fechas de festivos están por verificar con el DOGC; las festes majors están pendientes (T9).
-- Alquiler, población y HUT todavía no están integrados.
+- El padró es anual (no mensual) y el precio del alquiler es trimestral: son contexto, no se comparan mes a mes con los visitantes.
 - Los datos de Telefónica son estimaciones a partir de líneas móviles, no recuentos censales.
 - **Patrones, no causas:** ningún indicador explica por qué cambia algo.

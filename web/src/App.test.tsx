@@ -22,9 +22,13 @@ describe("App", () => {
     expect(await screen.findByRole("heading", { level: 2, name: "Barri de mostra A" })).toBeInTheDocument();
     const kpis = screen.getByRole("region", { name: "Indicadors" });
     const cards = within(kpis).getAllByRole("article");
-    expect(cards).toHaveLength(3); // rent, residents and HUT are absent in the sample -> hidden
-    expect(within(kpis).getAllByTestId("coverage-badge")).toHaveLength(3);
+    expect(cards.map((c) => c.querySelector("h3")?.textContent)).toEqual(
+      ["Visitants regionals", "Canvi vs any anterior", "Quota de cap de setmana", "Lloguer €/m²"]);
+    expect(within(kpis).getAllByTestId("coverage-badge")).toHaveLength(4);
     expect(kpis).not.toHaveTextContent("Sense dada");
+    const context = screen.getByRole("region", { name: "Context del barri" });
+    expect(within(context).getAllByRole("article")).toHaveLength(2);
+    expect(context).toHaveTextContent("HUT per 1.000 residents");
   });
 
   it("switches barri", async () => {

@@ -155,6 +155,7 @@ describe("Footer", () => {
     expect(footer).toHaveTextContent("Barri Lab (201_F, UPF)");
     expect(footer).toHaveTextContent("2023-01 – 2025-08");
     expect(footer).toHaveTextContent("Open Data BCN");
+    expect(footer).toHaveTextContent("Incasòl");
   });
 });
 

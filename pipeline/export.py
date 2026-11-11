@@ -133,11 +133,40 @@ def _homes(
     return homes
 
 
-def _context() -> Json:
+HUT_WINDOW = "HUT 2025T2 · padró 2025"
+
+
+def _quarter_label(quarter: str) -> str:
+    return quarter.replace("Q", "T")  # 2024Q1 -> 2024T1 (Catalan "trimestre")
+
+
+def _rent_value(row: Row | None) -> Json:
+    if row is None or row.get("rent_eur_m2") is None:
+        window = _quarter_label(row["quarter"]) if row and row.get("quarter") else PENDING_WINDOW
+        return _absent(window)
+    return _published(round(float(row["rent_eur_m2"]), 2), _quarter_label(row["quarter"]))
+
+
+def _residents_value(row: Row | None) -> Json:
+    if row is None or row.get("residents") is None:
+        return _absent(f"padró 1 gen. {row['month'].year}" if row else PENDING_WINDOW)
+    return _published(int(row["residents"]), f"padró 1 gen. {row['month'].year}")
+
+
+def _context(rows: list[Row]) -> Json:
+    """Latest published rent and residents, and HUT per 1,000 residents."""
+    if not rows:
+        return {"rent": _absent(PENDING_WINDOW), "residents": _absent(PENDING_WINDOW),
+                "hut_per_1000": _absent(PENDING_WINDOW)}
+    ordered = sorted(rows, key=lambda r: r["month"])
+    rent = next((r for r in reversed(ordered) if r.get("rent_eur_m2") is not None), None)
+    residents = next((r for r in reversed(ordered) if r.get("residents") is not None), None)
+    hut = next((r["hut_per_1000"] for r in ordered if r.get("hut_per_1000") is not None), None)
     return {
-        "rent": _absent(PENDING_WINDOW),
-        "residents": _absent(PENDING_WINDOW),
-        "hut_per_1000": _absent(PENDING_WINDOW),
+        "rent": _rent_value(rent),
+        "residents": _residents_value(residents),
+        "hut_per_1000": (_absent(HUT_WINDOW) if hut is None
+                         else _published(round(float(hut), 1), HUT_WINDOW)),
     }
 
 
@@ -150,8 +179,11 @@ def barri_payload(
     holidays_by_month: Mapping[str, list[str]],
     centroids: Mapping[str, tuple[float, float]] | None = None,
     top_homes: int | None = TOP_HOMES,
+    context_rows: Iterable[Row] | None = None,
 ) -> Json:
-    """The JSON document for one pilot barri."""
+    """The JSON document for one pilot barri. `context_rows` add rent/residents per month."""
+    context = list(context_rows or [])
+    by_month_ctx = {r["month"]: r for r in context}
     weekend = {r["month"]: r for r in weekend_rows}
     homes_by_month: dict[date, list[Row]] = defaultdict(list)
     for r in home_rows:
@@ -167,7 +199,11 @@ def barri_payload(
             "holidays": list(holidays_by_month.get(_ym(month), [])),
             "homes": _homes(homes_by_month.get(month, []), centroids or {}, top_homes),
         })
-    return {"code": code, "name": name, "months": months, "context": _context()}
+        if context:
+            ctx = by_month_ctx.get(month)
+            months[-1]["rent"] = _rent_value(ctx)
+            months[-1]["residents"] = _residents_value(ctx)
+    return {"code": code, "name": name, "months": months, "context": _context(context)}
 
 
 # ------------------------------------------------------------------ checks
@@ -194,6 +230,8 @@ def assert_threshold(payload: Json, threshold: int = PROVIDER_THRESHOLD) -> None
         if m["visitors"]["state"] == PUBLISHED:
             counts.append((f"{m['month']} visitors", m["visitors"]["value"]))
         counts.extend((f"{m['month']} home {h['code']}", h["visitors"]) for h in m.get("homes", []))
+        if m.get("residents", {}).get("state") == PUBLISHED:
+            counts.append((f"{m['month']} residents", m["residents"]["value"]))
     residents = payload["context"]["residents"]
     if residents["state"] == PUBLISHED:
         counts.append(("residents", residents["value"]))
@@ -257,7 +295,15 @@ def sample_payloads() -> tuple[Json, list[Json]]:
         homes: list[Row] = [{"month": m, "home": c, "home_name": n, "visitors": 100 * (3 - j) + k}
                  for m in months for j, (c, n, _, _) in enumerate(SAMPLE_HOMES)]
         holidays = {"2023-09": ["La Mercè"], "2024-09": ["La Mercè"], "2024-12": ["Nadal"]}
-        barris.append(barri_payload(code, name, visitors, weekend, homes, holidays, centroids))
+        context: list[Row] = [  # synthetic rent / padró / HUT values
+            {"month": m, "quarter": f"{m.year}Q{(m.month - 1) // 3 + 1}",
+             "rent_eur_m2": 14.0 + k + 0.1 * i,
+             "residents": 40000 + 1000 * k + 100 * (m.year - 2023),
+             "hut": 100 * (k + 1), "hut_per_1000": 2.5 * (k + 1)}
+            for i, m in enumerate(months)
+        ]
+        barris.append(barri_payload(code, name, visitors, weekend, homes, holidays, centroids,
+                                    context_rows=context))
     meta = {
         "generated": "sample",
         "window": {"start": "2023-01", "end": "2025-08"},
@@ -340,7 +386,9 @@ def export_real(con: Any, cache_dir: Path, out_dir: Path = WEB_DATA_DIR) -> int:
                       _rows(con, ind / "visitors_monthly.parquet", code),
                       _rows(con, ind / "weekend_share.parquet", code),
                       _rows(con, ind / "visitors_by_home.parquet", code),
-                      holidays, centroids)
+                      holidays, centroids,
+                      context_rows=(_rows(con, ind / "context_monthly.parquet", code)
+                                    if (ind / "context_monthly.parquet").exists() else None))
         for code, name in PILOTS.items()
     ]
     cal = con.read_parquet(str(calendar))

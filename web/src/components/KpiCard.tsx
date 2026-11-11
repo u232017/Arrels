@@ -4,13 +4,14 @@ import type { Value } from "../types";
 import { StatusDot } from "./StatusDot";
 import { Card } from "./ui/card";
 
-export type KpiFormat = "int" | "pct" | "signedPct" | "euro";
+export type KpiFormat = "int" | "pct" | "signedPct" | "euroM2" | "dec1";
 
 const FORMATTERS: Record<KpiFormat, (n: number) => string> = {
   int: formatInt,
   pct: formatPct,
   signedPct: formatSignedPct,
-  euro: (n) => `${n.toFixed(1).replace(".", ",")} €`,
+  euroM2: (n) => `${n.toFixed(1).replace(".", ",")} €/m²`,
+  dec1: (n) => n.toFixed(1).replace(".", ","),
 };
 
 interface Props {

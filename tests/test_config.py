@@ -19,7 +19,7 @@ def test_load_settings_reads_paths_from_env(tmp_path):
     settings = load_settings(_env(tmp_path))
     assert settings.mobility_dir == tmp_path / "mob"
     assert settings.cache_dir == tmp_path / "c"
-    assert settings.rent_file is None
+    assert settings.population_file is None
     assert settings.force_rebuild is False
 
 
@@ -62,3 +62,17 @@ def test_connect_applies_memory_limit(tmp_path):
     limit = con.sql("SELECT current_setting('memory_limit')").fetchone()[0]
     assert "953" in limit or limit.upper().startswith("1")
     assert isinstance(settings, Settings)
+
+
+def test_population_may_point_to_a_folder(tmp_path):
+    folder = tmp_path / "pad"
+    folder.mkdir()
+    settings = load_settings(_env(tmp_path, POPULATION_FILE=str(folder)))
+    assert settings.population_file == folder
+
+
+def test_rent_defaults_to_the_public_reference_file(tmp_path):
+    from pipeline.config import RENT_REFERENCE
+
+    assert load_settings(_env(tmp_path)).rent_file == RENT_REFERENCE
+    assert RENT_REFERENCE.exists()

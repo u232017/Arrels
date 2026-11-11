@@ -9,8 +9,9 @@ export function Footer({ meta }: { meta: Meta | null }) {
           {meta ? ` · Dades ${meta.window.start} – ${meta.window.end}` : ""} · Dades agregades; cap valor per sota de 15.
         </p>
         <p className="m-0 mt-1">
-          Fonts: Telefónica (mobilitat i turisme) · Generalitat de Catalunya, ICGC (municipis) ·
-          Ajuntament de Barcelona, Open Data BCN (barris, CC-BY 4.0) · OpenFreeMap, © OpenStreetMap (mapa base).
+          Fonts: Telefónica (mobilitat i turisme) · Generalitat de Catalunya, Incasòl via Barcelona Dades (lloguer, CC-BY 4.0) ·
+          Ajuntament de Barcelona, Open Data BCN (padró, HUT i barris, CC-BY 4.0) · Generalitat de Catalunya, ICGC (municipis) ·
+          OpenFreeMap, © OpenStreetMap (mapa base).
         </p>
       </div>
     </footer>

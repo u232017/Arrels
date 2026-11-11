@@ -41,9 +41,11 @@ test.describe("Arrels single page", () => {
     await expect(app.kpis).not.toContainText("Finestra"); // never the long line on screen
   });
 
-  test("no KPI card is empty", async () => {
+  test("no KPI card is empty", async ({ page }) => {
     const cards = app.kpis.getByRole("article");
-    await expect(cards).toHaveCount(3);
+    await expect(cards).toHaveCount(4);
+    await expect(app.kpi(/lloguer/i)).toContainText("€/m²");
+    await expect(page.getByRole("region", { name: "Context del barri" }).getByRole("article")).toHaveCount(2);
     await expect(app.kpis).not.toContainText("Sense dada");
     await expect(app.kpis).not.toContainText("Pendent");
   });

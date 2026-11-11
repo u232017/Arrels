@@ -31,6 +31,8 @@ export interface BarriMonth {
   weekend_share: Value;
   holidays: string[];
   homes?: Home[];
+  rent?: Value;
+  residents?: Value;
 }
 
 export interface Barri {

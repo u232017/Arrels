@@ -143,6 +143,12 @@
           "items": {
             "$ref": "#/$defs/home"
           }
+        },
+        "rent": {
+          "$ref": "#/$defs/value"
+        },
+        "residents": {
+          "$ref": "#/$defs/countValue"
         }
       },
       "additionalProperties": false

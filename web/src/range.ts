@@ -82,3 +82,22 @@ export function summarise(months: BarriMonth[]): Summary {
     weekendShare: valueOrAbsent(we.length ? mean(we) : null, meanBadge(weekend, window)),
   };
 }
+
+/** Mean rent €/m² over the selected months (each quarter weighted by its months). */
+export function periodRent(months: BarriMonth[]): Value {
+  const values = months.map((m) => m.rent).filter((v): v is Value => v !== undefined);
+  const pub = values.filter(isPublished);
+  const windows = pub.map((v) => v.badge.window);
+  const window = windows.length ? (windows[0] === windows[windows.length - 1] ? windows[0] : `${windows[0]} – ${windows[windows.length - 1]}`) : "";
+  if (pub.length === 0) return absentWith(window || "sense dades de lloguer");
+  const n = months.length || 1;
+  const pctPub = (100 * pub.length) / n;
+  return { value: mean(pub.map((v) => v.value)), state: "published",
+           badge: { window, pct_published: pctPub, pct_suppressed: 0, pct_absent: 100 - pctPub } };
+}
+
+/** Residents from the padró of the last selected month that has a value. */
+export function periodResidents(months: BarriMonth[]): Value {
+  const last = [...months].reverse().map((m) => m.residents).find((v): v is Value => v !== undefined && isPublished(v));
+  return last ?? absentWith("sense dades de padró");
+}

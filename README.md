@@ -74,9 +74,9 @@ make web-dev           # http://localhost:5173
 |---|---|---|---|
 | `MOBILITY_DIR` | sí | Carpeta de movilidad de Telefónica (subcarpetas YYYY-MM) | `/path/to/output_limite_legal` |
 | `TOURISM_DIR` | sí | Carpeta de turismo de Telefónica (subcarpetas YYYYMM) | `/path/to/output_limite_legal 2` |
-| `RENT_FILE` | no | Alquiler por barri y trimestre (pendiente de integrar) | `/path/to/rent_per_barri_quarter.csv` |
-| `POPULATION_FILE` | no | Residentes por barri y mes (pendiente de integrar) | `/path/to/population_per_barri_month.csv` |
-| `HUT_FILE` | no | Inventario de viviendas de uso turístico, 2025T2 (pendiente de integrar) | `/path/to/hut_inventory.csv` |
+| `RENT_FILE` | no | Alquiler €/m² por barri y trimestre; vacío = pipeline/reference/rent_pilot_quarters.csv (Portal de Dades) | `` |
+| `POPULATION_FILE` | no | Carpeta con los *_pad_mdbas.csv de Open Data BCN (padró a 1 de enero) | `data/raw/context` |
+| `HUT_FILE` | no | Registro HUT de Open Data BCN, 2025T2 (habitatges-us-turistic) | `data/raw/context/2025_2T_hut_comunicacio_opendata.csv` |
 | `MIGRATION_FILE` | no | Migración residencial anual, o "none" | `none` |
 | `CACHE_DIR` | no | Carpeta de la caché Parquet | `data/cache` |
 | `DUCKDB_MEMORY_LIMIT` | no | Memoria máxima de DuckDB | `6GB` |

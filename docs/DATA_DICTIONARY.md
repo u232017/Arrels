@@ -115,12 +115,12 @@ Conclusión: el 62 % del enunciado corresponde a "días con fila" (incluidas sup
 
 | Fuente | Ruta | Estado |
 |---|---|---|
-| Alquiler por barrio y trimestre | `RENT_FILE` | ❌ **No localizado** en este portátil |
-| Población por barrio y mes | `POPULATION_FILE` | ❌ **No localizado** |
-| HUT (2025T2) | `HUT_FILE` | ❌ **No localizado** |
+| Alquiler €/m² por barri y trimestre | `pipeline/reference/rent_pilot_quarters.csv` (o `RENT_FILE`) | ✅ Barcelona Dades, *Preu mitjà per superfície (€/m²) del lloguer d'habitatges* (Incasòl, CC-BY 4.0), 2023T1–2025T4, 3 barris piloto, copiado de la tabla trimestral el 2026-11-11 |
+| Población por barri | `POPULATION_FILE` (carpeta) | ✅ Open Data BCN `pad_mdbas` (padró a 1 de enero, por sección censal, CC-BY 4.0): 2023, 2024, 2025. **Anual, no mensual** |
+| HUT (2025T2) | `HUT_FILE` | ✅ Open Data BCN `habitatges-us-turistic`, `2025_2T_hut_comunicacio_opendata.csv` (CC-BY 4.0); solo se usa el recuento por barri |
 | Migración residencial | `MIGRATION_FILE` | opcional, `none` |
 
-Las cifras de enlace (97,3 %, 100 %, 95,33 %) del enunciado no se han podido verificar todavía.
+Las cifras de enlace del equipo (97,3 %, 100 %, 95,33 %) se refieren a sus ficheros validados y no se han podido verificar; aquí se usan las fuentes públicas (decisión D6).
 
 ## 5. Datos públicos de referencia (versionados en Git)
 

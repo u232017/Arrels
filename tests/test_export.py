@@ -204,3 +204,42 @@ def test_pilot_entries_include_known_coordinates():
                         {"080190308": (41.37746, 2.13635)})
     assert out == [{"code": "080190308", "name": "Sants", "lat": 41.37746, "lon": 2.13635},
                    {"code": "080190904", "name": "Sant Andreu"}]
+
+
+def _context_rows():
+    return [
+        {"month": date(2024, 2, 1), "quarter": "2024Q1", "rent_eur_m2": 17.2, "residents": 1500,
+         "hut": 30, "hut_per_1000": 20.0},
+        {"month": date(2024, 3, 1), "quarter": "2024Q1", "rent_eur_m2": None, "residents": None,
+         "hut": 30, "hut_per_1000": 20.0},
+    ]
+
+
+def test_months_carry_rent_and_residents_with_their_windows():
+    payload = _payload(context_rows=_context_rows())
+    feb = _month(payload, "2024-02")
+    assert feb["rent"] == {"value": 17.2, "state": "published",
+                           "badge": {"window": "2024T1", "pct_published": 100, "pct_suppressed": 0,
+                                     "pct_absent": 0}}
+    assert feb["residents"]["value"] == 1500
+    assert feb["residents"]["badge"]["window"] == "padró 1 gen. 2024"
+    validate(payload, "barri")
+
+
+def test_missing_context_is_absent_not_zero():
+    mar = _month(_payload(context_rows=_context_rows()), "2024-03")
+    assert (mar["rent"]["state"], mar["residents"]["state"]) == ("absent", "absent")
+
+
+def test_hut_per_1000_and_latest_context_values():
+    ctx = _payload(context_rows=_context_rows())["context"]
+    assert ctx["hut_per_1000"]["value"] == 20.0
+    assert ctx["hut_per_1000"]["badge"]["window"] == "HUT 2025T2 · padró 2025"
+    assert ctx["rent"]["value"] == 17.2
+    assert ctx["residents"]["value"] == 1500
+
+
+def test_payload_without_context_is_unchanged():
+    payload = _payload()
+    assert "rent" not in payload["months"][0]
+    assert payload["context"]["rent"]["state"] == "absent"

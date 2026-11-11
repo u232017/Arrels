@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { periodHomes } from "../homes";
-import { inRange, periodChange, summarise } from "../range";
+import { inRange, periodChange, periodRent, periodResidents, summarise } from "../range";
 import { summarySentence } from "../summary";
 import type { Barri, Meta } from "../types";
 import type { Range } from "../useArrelsData";
@@ -25,6 +25,8 @@ export function BarriView({ barri, meta, range, baseYear }: Props) {
   const change = useMemo(() => periodChange(barri.months, range.from, range.to), [barri, range]);
   const homes = useMemo(() => periodHomes(shown), [shown]);
   const pilot = useMemo(() => meta.pilots.find((p) => p.code === barri.code), [meta, barri]);
+  const rent = useMemo(() => periodRent(shown), [shown]);
+  const residents = useMemo(() => periodResidents(shown), [shown]);
   const single = range.from === range.to;
   const noData = summary.visitors.state === "absent";
 
@@ -37,8 +39,17 @@ export function BarriView({ barri, meta, range, baseYear }: Props) {
     summary.weekendShare.state !== "absent"
       ? <KpiCard key="w" title="Quota de cap de setmana" value={summary.weekendShare} format="pct" note={UNIFORM_WEEKEND} />
       : null,
-    barri.context.rent.state !== "absent"
-      ? <KpiCard key="r" title="Lloguer €/m²" value={barri.context.rent} format="euro" note="Lloguer contractual, trimestral" />
+    rent.state !== "absent"
+      ? <KpiCard key="r" title="Lloguer €/m²" value={rent} format="euroM2" note="Mitjana del període (fiances, trimestral)" />
+      : null,
+  ].filter(Boolean);
+  const contextCards = [
+    residents.state !== "absent"
+      ? <KpiCard key="res" title="Residents" value={residents} format="int" note="Padró municipal a 1 de gener" />
+      : null,
+    barri.context.hut_per_1000.state !== "absent"
+      ? <KpiCard key="hut" title="HUT per 1.000 residents" value={barri.context.hut_per_1000} format="dec1"
+                 note="Habitatges d'ús turístic, 2025T2" />
       : null,
   ].filter(Boolean);
 
@@ -62,6 +73,13 @@ export function BarriView({ barri, meta, range, baseYear }: Props) {
               {cards}
             </div>
           </section>
+
+          {contextCards.length ? (
+            <section aria-labelledby="context-title" className="flex flex-col gap-3">
+              <h2 id="context-title" className="m-0 text-section font-semibold text-navy">Context del barri</h2>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">{contextCards}</div>
+            </section>
+          ) : null}
 
           <section aria-labelledby="homes-title" className="flex flex-col gap-3">
             <div className="flex flex-wrap items-end justify-between gap-2">

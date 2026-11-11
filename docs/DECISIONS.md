@@ -41,6 +41,15 @@ Registro de decisiones del equipo. Cada entrada: fecha, decisión, motivo, impac
 - **Decisión:** el JSON incluye todos los municipios publicados (≥15) por barri y mes, no solo los
   40 primeros. Export real: ~2,0 MB (límite 5 MB).
 
+## D6 — Fuentes públicas para lloguer, padró y HUT (2026-11-11)
+
+- **Decisión:** como los ficheros validados por el equipo no estaban en este portátil, se usan las
+  fuentes públicas del Ajuntament (CC-BY 4.0): Barcelona Dades (lloguer €/m², Incasòl, trimestral),
+  Open Data BCN `pad_mdbas` (padró anual a 1 de enero) y `habitatges-us-turistic` (HUT 2025T2).
+- **Impacto:** el padró es anual (el plan decía mensual). El lloguer se copió de la tabla trimestral
+  de Barcelona Dades para los 3 barris piloto (la API requiere usuario). Comprobado contra la media
+  anual de la misma página.
+
 ## Pendientes
 
 - `cod_municipio_residencia = "NA"` en Tabla 9. Propuesta por defecto: mostrar como

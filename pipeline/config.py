@@ -18,6 +18,9 @@ DEFAULT_CACHE_DIR = "data/cache"
 DEFAULT_MEMORY_LIMIT = "6GB"
 DEFAULT_THREADS = 8
 NONE_VALUES = {"", "none"}
+# Public rent figures for the pilot barris (Portal de Dades, CC-BY 4.0).
+# Used when RENT_FILE is empty.
+RENT_REFERENCE = Path(__file__).parent / "reference" / "rent_pilot_quarters.csv"
 
 
 class ConfigError(ValueError):
@@ -49,12 +52,14 @@ def _required_dir(env: Mapping[str, str], name: str) -> Path:
     return path
 
 
-def _optional_file(env: Mapping[str, str], name: str) -> Path | None:
+def _optional_file(
+    env: Mapping[str, str], name: str, allow_dir: bool = False, default: Path | None = None
+) -> Path | None:
     raw = env.get(name, "").strip()
     if raw.lower() in NONE_VALUES:
-        return None
+        return default
     path = Path(raw).expanduser()
-    if not path.is_file():
+    if not (path.is_file() or (allow_dir and path.is_dir())):
         raise ConfigError(f"{name} points to a file that does not exist: {path}")
     return path
 
@@ -78,8 +83,8 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         mobility_dir=_required_dir(env, "MOBILITY_DIR"),
         tourism_dir=_required_dir(env, "TOURISM_DIR"),
         cache_dir=cache_dir,
-        rent_file=_optional_file(env, "RENT_FILE"),
-        population_file=_optional_file(env, "POPULATION_FILE"),
+        rent_file=_optional_file(env, "RENT_FILE", default=RENT_REFERENCE),
+        population_file=_optional_file(env, "POPULATION_FILE", allow_dir=True),
         hut_file=_optional_file(env, "HUT_FILE"),
         migration_file=_optional_file(env, "MIGRATION_FILE"),
         duckdb_memory_limit=env.get("DUCKDB_MEMORY_LIMIT", DEFAULT_MEMORY_LIMIT),
