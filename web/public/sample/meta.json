@@ -1,0 +1,1 @@
+{"generated":"sample","window":{"start":"2023-01","end":"2025-08"},"threshold":15,"pilots":[{"code":"000000001","name":"Barri de mostra A"},{"code":"000000002","name":"Barri de mostra B"},{"code":"000000003","name":"Barri de mostra C"}],"missing_days":["2024-02-11"],"partial_days":["2025-04-12"]}
