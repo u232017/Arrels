@@ -16,7 +16,11 @@ def load_holidays(
     con: duckdb.DuckDBPyConnection, path: Path = HOLIDAYS_FILE
 ) -> duckdb.DuckDBPyRelation:
     """One row per holiday date: (day, scope, name_ca, source)."""
-    return con.read_csv(str(path), header=True, dtype={"day": "DATE"})
+    rel = con.read_csv(str(path), header=True, dtype={"day": "DATE"})
+    dupes = rel.aggregate("day, count(*) AS n", "day").filter("n > 1").project("day").fetchall()
+    if dupes:
+        raise ValueError(f"{path.name}: duplicate dates {[str(d) for (d,) in dupes]}")
+    return rel
 
 
 def with_holiday_flags(

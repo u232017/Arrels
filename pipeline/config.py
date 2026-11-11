@@ -35,6 +35,7 @@ class Settings:
     migration_file: Path | None
     duckdb_memory_limit: str
     duckdb_temp_dir: Path
+    duckdb_threads: int
     force_rebuild: bool
 
 
@@ -58,6 +59,15 @@ def _optional_file(env: Mapping[str, str], name: str) -> Path | None:
     return path
 
 
+def _int(env: Mapping[str, str], name: str, default: int) -> int:
+    raw = env.get(name, "").strip()
+    if not raw:
+        return default
+    if not raw.isdigit() or int(raw) < 1:
+        raise ConfigError(f"{name} must be a positive integer, got {raw!r}")
+    return int(raw)
+
+
 def load_settings(env: Mapping[str, str] | None = None) -> Settings:
     """Build Settings from `env` (defaults to os.environ after loading `.env`)."""
     if env is None:
@@ -74,6 +84,7 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         migration_file=_optional_file(env, "MIGRATION_FILE"),
         duckdb_memory_limit=env.get("DUCKDB_MEMORY_LIMIT", DEFAULT_MEMORY_LIMIT),
         duckdb_temp_dir=Path(env.get("DUCKDB_TEMP_DIR", str(cache_dir / "duckdb_tmp"))),
+        duckdb_threads=_int(env, "DUCKDB_THREADS", DEFAULT_THREADS),
         force_rebuild=env.get("FORCE_REBUILD", "0").strip() == "1",
     )
 
@@ -84,5 +95,5 @@ def connect(settings: Settings) -> duckdb.DuckDBPyConnection:
     con = duckdb.connect()
     con.execute("SET memory_limit = ?", [settings.duckdb_memory_limit])
     con.execute("SET temp_directory = ?", [str(settings.duckdb_temp_dir)])
-    con.execute(f"SET threads = {DEFAULT_THREADS}")
+    con.execute(f"SET threads = {int(settings.duckdb_threads)}")
     return con

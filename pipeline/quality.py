@@ -31,7 +31,9 @@ def sub(rel: duckdb.DuckDBPyRelation) -> str:
 
 
 def families_of(rel: duckdb.DuckDBPyRelation) -> set[str]:
-    return {f for (f,) in rel.project("family").distinct().fetchall()}
+    """Families present in `rel` (min/max is enough: one value means one family)."""
+    lo, hi = rel.aggregate("min(family), max(family)").fetchone()
+    return {f for f in (lo, hi) if f is not None}
 
 
 def assert_family(rel: duckdb.DuckDBPyRelation, expected: str) -> None:

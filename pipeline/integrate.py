@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import math
 from collections.abc import Sequence
 
 import duckdb
+
+from pipeline.sql import quote_ident
 
 ALLOWED_HOW = {"left", "inner"}
 
@@ -14,7 +17,22 @@ class JoinIntegrityError(ValueError):
 
 
 def _totals(rel: duckdb.DuckDBPyRelation, measure: str) -> tuple[int, float | None]:
-    return rel.aggregate(f"count(*), sum({measure})").fetchone()
+    n, total = rel.aggregate(f"count(*), sum({quote_ident(measure)})").fetchone()
+    return n, total
+
+
+def _same_total(a: float | None, b: float | None) -> bool:
+    if a is None or b is None:
+        return a is b
+    return math.isclose(a, b, rel_tol=1e-9, abs_tol=1e-9)
+
+
+def assert_unique(rel: duckdb.DuckDBPyRelation, keys: Sequence[str], label: str) -> None:
+    """Raise JoinIntegrityError if `keys` do not identify rows of `rel` uniquely."""
+    key_list = ", ".join(quote_ident(k) for k in keys)
+    dupes = rel.aggregate(f"{key_list}, count(*) AS n", key_list).filter("n > 1")
+    if dupes.count("*").fetchone()[0]:
+        raise JoinIntegrityError(f"{label} keys {list(keys)} are not unique")
 
 
 def checked_join(
@@ -29,15 +47,16 @@ def checked_join(
         raise ValueError(f"how must be one of {sorted(ALLOWED_HOW)}")
     if measure not in left.columns:
         raise JoinIntegrityError(f"measure {measure!r} is not a column of the left table")
-    key_list = ", ".join(keys)
-    dupes = right.aggregate(f"{key_list}, count(*) AS n", key_list).filter("n > 1").count("*")
-    if dupes.fetchone()[0]:
-        raise JoinIntegrityError(f"right table keys {list(keys)} are not unique")
+    for side, rel in (("left", left), ("right", right)):
+        missing = [k for k in keys if k not in rel.columns]
+        if missing:
+            raise JoinIntegrityError(f"join key {missing} is not a column of the {side} table")
+    assert_unique(right, keys, "right table")
 
-    joined = left.join(right, key_list, how=how)
+    joined = left.join(right, ", ".join(quote_ident(k) for k in keys), how=how)
     before, after = _totals(left, measure), _totals(joined, measure)
     if before[0] != after[0]:
         raise JoinIntegrityError(f"join changed rows: {before[0]} -> {after[0]}")
-    if before[1] != after[1]:
+    if not _same_total(before[1], after[1]):
         raise JoinIntegrityError(f"join changed sum({measure}): {before[1]} -> {after[1]}")
     return joined

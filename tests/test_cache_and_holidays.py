@@ -10,7 +10,7 @@ import pytest
 
 from pipeline.config import load_settings
 from pipeline.holidays import load_holidays, with_holiday_flags
-from pipeline.ingest import ingest_mobility, load_mobility, read_mobility
+from pipeline.ingest import DataContractError, ingest_mobility, load_mobility, read_mobility
 from pipeline.quality import build_calendar
 
 
@@ -24,10 +24,16 @@ def _settings(tmp_path: Path, mobility: Path, **extra: str):
 
 
 class TestParquetCache:
-    def test_ingest_writes_parquet_with_same_rows(self, con, tmp_path, feb_mobility):
+    """One Parquet file per family and month, so memory stays bounded and changes are local."""
+
+    def _mtimes(self, paths):
+        return [p.stat().st_mtime_ns for p in paths]
+
+    def test_ingest_writes_one_parquet_per_month_with_same_rows(
+            self, con, tmp_path, feb_mobility):
         settings = _settings(tmp_path, feb_mobility)
-        path = ingest_mobility(con, settings, "mun_barri")
-        assert path.exists()
+        paths = ingest_mobility(con, settings, "mun_barri")
+        assert [p.name for p in paths] == ["2024-02.parquet"]
         cached = load_mobility(con, settings, "mun_barri")
         raw = read_mobility(con, feb_mobility, "mun_barri")
         assert cached.aggregate("count(*), sum(viajes)").fetchone() == \
@@ -35,22 +41,34 @@ class TestParquetCache:
 
     def test_second_ingest_reuses_the_cache(self, con, tmp_path, feb_mobility):
         settings = _settings(tmp_path, feb_mobility)
-        first = ingest_mobility(con, settings, "mun_barri").stat().st_mtime_ns
-        second = ingest_mobility(con, settings, "mun_barri").stat().st_mtime_ns
-        assert first == second
+        first = self._mtimes(ingest_mobility(con, settings, "mun_barri"))
+        assert self._mtimes(ingest_mobility(con, settings, "mun_barri")) == first
 
-    def test_changed_source_triggers_rebuild(self, con, tmp_path, feb_mobility):
+    def test_changed_source_rebuilds_only_that_month(self, con, tmp_path, feb_mobility):
+        from tests.conftest import trip, write_mobility
+        write_mobility(feb_mobility, "mun_barri", [trip(date(2024, 3, 1), 20)])
         settings = _settings(tmp_path, feb_mobility)
-        first = ingest_mobility(con, settings, "mun_barri").stat().st_mtime_ns
-        src = next(feb_mobility.glob("*/*.csv"))
+        feb, mar = self._mtimes(ingest_mobility(con, settings, "mun_barri"))
+        src = next(feb_mobility.glob("2024-03/*.csv"))
         os.utime(src, ns=(src.stat().st_atime_ns, src.stat().st_mtime_ns + 10**9))
-        assert ingest_mobility(con, settings, "mun_barri").stat().st_mtime_ns != first
+        feb2, mar2 = self._mtimes(ingest_mobility(con, settings, "mun_barri"))
+        assert feb2 == feb
+        assert mar2 != mar
 
     def test_force_rebuild_ignores_the_cache(self, con, tmp_path, feb_mobility):
         settings = _settings(tmp_path, feb_mobility)
-        first = ingest_mobility(con, settings, "mun_barri").stat().st_mtime_ns
+        first = self._mtimes(ingest_mobility(con, settings, "mun_barri"))
         forced = _settings(tmp_path, feb_mobility, FORCE_REBUILD="1")
-        assert ingest_mobility(con, forced, "mun_barri").stat().st_mtime_ns != first
+        assert self._mtimes(ingest_mobility(con, forced, "mun_barri")) != first
+
+    def test_bad_month_leaves_no_parquet_behind(self, con, tmp_path):
+        from tests.conftest import trip, write_mobility
+        root = tmp_path / "bad"
+        write_mobility(root, "mun_barri", [trip(date(2024, 2, 1), 7)])
+        settings = _settings(tmp_path, root)
+        with pytest.raises(DataContractError):
+            ingest_mobility(con, settings, "mun_barri")
+        assert list((tmp_path / "cache").rglob("*.parquet")) == []
 
     def test_load_without_ingest_fails_clearly(self, con, tmp_path, feb_mobility):
         settings = _settings(tmp_path, feb_mobility)

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import duckdb
 
+from pipeline.integrate import assert_unique
 from pipeline.quality import DAY_MISSING, assert_family, sub
 
 ROUTE_FAMILY = "mun_barri"
@@ -30,15 +31,19 @@ def monthly_route_coverage(
                  count(*) AS days_in_month,
                  count(*) FILTER (WHERE day_status = '{DAY_MISSING}') AS days_missing
           FROM {sub(calendar)} GROUP BY 1),
-        routes AS (
-          SELECT date_trunc('month', day)::DATE AS month, origen,
-                 municipio_origen AS origin_mun, barrio_destino AS dest_barri,
-                 count(DISTINCT day) AS days_with_row,
-                 count(DISTINCT day) FILTER (WHERE viajes > 0) AS days_published,
-                 count(DISTINCT day) FILTER (WHERE viajes = 0) AS days_suppressed,
-                 sum(viajes) AS trips_published
+        route_days AS (
+          SELECT day, origen, municipio_origen AS origin_mun, barrio_destino AS dest_barri,
+                 sum(viajes) AS v
           FROM {sub(rel)}
           WHERE barrio_origen IS NULL AND barrio_destino IS NOT NULL
+          GROUP BY ALL),
+        routes AS (
+          SELECT date_trunc('month', day)::DATE AS month, origen, origin_mun, dest_barri,
+                 count(*) AS days_with_row,
+                 count(*) FILTER (WHERE v > 0) AS days_published,
+                 count(*) FILTER (WHERE v = 0) AS days_suppressed,
+                 sum(v) AS trips_published
+          FROM route_days
           GROUP BY ALL)
         SELECT r.month, r.origen, r.origin_mun, r.dest_barri,
                m.days_in_month, m.days_missing,
@@ -55,10 +60,12 @@ def trips_per_visitor(
     visitors: duckdb.DuckDBPyRelation,
 ) -> duckdb.DuckDBPyRelation:
     """Regional trips / Table 9 unique visitors, only on covered routes (R5)."""
+    assert_unique(visitors, ["month", "cod_municipio_residencia", "cod_barrio"], "visitors")
     return con.sql(f"""
         SELECT c.month, c.origin_mun, c.dest_barri, c.trips_published AS trips,
                v.visitantes AS visitors, c.meets_coverage,
-               CASE WHEN c.meets_coverage THEN c.trips_published / v.visitantes END AS ratio
+               CASE WHEN c.meets_coverage
+                    THEN c.trips_published / NULLIF(v.visitantes, 0) END AS ratio
         FROM {sub(coverage)} c
         JOIN {sub(visitors)} v
           ON v.month = c.month

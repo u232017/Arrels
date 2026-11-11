@@ -1,7 +1,7 @@
-"""Read Telefónica CSVs into typed DuckDB relations.
+"""Read Telefónica CSVs into typed DuckDB relations and cache them as Parquet.
 
-Codes stay as text (leading zeros), `"-"` becomes NULL, `viajes` becomes BIGINT.
-Every read is checked against the provider's data contract before it is returned.
+Codes stay as text (leading zeros), `"-"` and empty fields become NULL, `viajes`
+becomes BIGINT. Every read is checked against the provider's data contract.
 """
 
 from __future__ import annotations
@@ -14,6 +14,7 @@ import duckdb
 from pipeline.cache import fingerprint, is_fresh, write_manifest
 from pipeline.config import Settings
 from pipeline.quality import PUBLISHED
+from pipeline.sql import quote_literal
 
 logger = logging.getLogger(__name__)
 
@@ -25,130 +26,133 @@ FAMILY_PREFIX = {
 FAMILIES = tuple(FAMILY_PREFIX)
 PROVIDER_THRESHOLD = 15
 NO_BARRI = "-"
+BARRI_COLUMNS = ("barrio_origen", "barrio_origen_name", "barrio_destino", "barrio_destino_name")
 
 
 class DataContractError(ValueError):
     """The raw data does not look like the provider says it should."""
 
 
-def _quote(path: Path | str) -> str:
-    return "'" + str(path).replace("'", "''") + "'"
-
-
-def mobility_glob(mobility_dir: Path, family: str) -> str:
+def mobility_files(mobility_dir: Path, family: str) -> list[Path]:
+    """Sorted CSV files of one family (one per month folder)."""
     if family not in FAMILY_PREFIX:
         raise ValueError(f"Unknown family {family!r}; expected one of {FAMILIES}")
-    return str(Path(mobility_dir) / "*" / f"{FAMILY_PREFIX[family]}_*_origen.csv")
+    files = sorted(Path(mobility_dir).glob(f"*/{FAMILY_PREFIX[family]}_*_origen.csv"))
+    if not files:
+        raise FileNotFoundError(f"No {family} CSV files under {mobility_dir}")
+    return files
 
 
-def _mobility_select(family: str, source: str) -> str:
-    barri_cols = (
-        f"""
-        NULLIF(barrio_origen, '{NO_BARRI}') AS barrio_origen,
-        NULLIF(barrio_origen_name, '{NO_BARRI}') AS barrio_origen_name,
-        NULLIF(barrio_destino, '{NO_BARRI}') AS barrio_destino,
-        NULLIF(barrio_destino_name, '{NO_BARRI}') AS barrio_destino_name,"""
-        if family != "municipal"
-        else ""
-    )
+def _csv_source(files: list[Path], delim: str = ",") -> str:
+    paths = ", ".join(quote_literal(f) for f in files)
+    return f"read_csv([{paths}], delim={quote_literal(delim)}, all_varchar=true, header=true)"
+
+
+def _typed_select(family: str, source: str) -> str:
+    barri_cols = ""
+    if family != "municipal":
+        # '-' means "no barri"; an empty field is treated the same so the contract catches it.
+        barri_cols = "".join(
+            f"NULLIF(NULLIF(trim({c}), '{NO_BARRI}'), '') AS {c},\n" for c in BARRI_COLUMNS
+        )
     return f"""
         SELECT
-          CAST(day AS DATE) AS day,
+          TRY_CAST(day AS DATE) AS day,
           origen,
           municipio_origen, municipio_origen_name,
           municipio_destino, municipio_destino_name,
           {barri_cols}
-          CAST(viajes AS BIGINT) AS viajes,
+          TRY_CAST(viajes AS BIGINT) AS viajes,
           '{family}' AS family
         FROM {source}"""
 
 
-def _contract_violations(con: duckdb.DuckDBPyConnection, family: str, source: str) -> list[str]:
+def validate_mobility(rel: duckdb.DuckDBPyRelation, family: str) -> None:
+    """Raise DataContractError if a typed mobility relation breaks the provider contract."""
     barri_check = {
-        "mun_barri": f"""(barrio_origen = '{NO_BARRI}')::INT
-                         + (barrio_destino = '{NO_BARRI}')::INT <> 1""",
-        "barri_barri": f"barrio_origen = '{NO_BARRI}' OR barrio_destino = '{NO_BARRI}'",
+        "mun_barri": "(barrio_origen IS NULL)::INT + (barrio_destino IS NULL)::INT <> 1",
+        "barri_barri": "barrio_origen IS NULL OR barrio_destino IS NULL",
         "municipal": "FALSE",
     }[family]
-    bad_viajes, bad_barri = con.sql(f"""
-        SELECT
-          count(*) FILTER (WHERE TRY_CAST(viajes AS BIGINT) IS NULL
-                           OR TRY_CAST(viajes AS BIGINT) < 0
-                           OR TRY_CAST(viajes AS BIGINT) BETWEEN 1 AND {PROVIDER_THRESHOLD - 1}),
-          count(*) FILTER (WHERE {barri_check})
-        FROM {source}""").fetchone()
+    bad_day, bad_viajes, bad_barri = rel.aggregate(f"""
+        count(*) FILTER (WHERE day IS NULL),
+        count(*) FILTER (WHERE viajes IS NULL OR viajes < 0
+                         OR viajes BETWEEN 1 AND {PROVIDER_THRESHOLD - 1}),
+        count(*) FILTER (WHERE {barri_check})""").fetchone()
     problems = []
+    if bad_day:
+        problems.append(f"{bad_day} rows with an invalid day")
     if bad_viajes:
         problems.append(
             f"{bad_viajes} rows with invalid viajes (must be 0 or >= {PROVIDER_THRESHOLD})"
         )
-    if bad_barri and family == "mun_barri":
-        problems.append(f"{bad_barri} mun_barri rows without exactly one barri side")
-    elif bad_barri:
-        problems.append(f"{bad_barri} barri_barri rows without a barri code")
-    return problems
+    if bad_barri:
+        rule = "exactly one barri side" if family == "mun_barri" else "a barri code on both sides"
+        problems.append(f"{bad_barri} rows without {rule}")
+    if problems:
+        raise DataContractError(f"{family}: " + "; ".join(problems))
 
 
 def read_mobility(
     con: duckdb.DuckDBPyConnection, mobility_dir: Path, family: str
 ) -> duckdb.DuckDBPyRelation:
-    """Typed relation for one granularity family (R3). Validates the contract first."""
-    source = f"read_csv({_quote(mobility_glob(mobility_dir, family))}, all_varchar=true)"
-    problems = _contract_violations(con, family, source)
-    if problems:
-        raise DataContractError(f"{family}: " + "; ".join(problems))
-    return con.sql(_mobility_select(family, source))
+    """Typed relation for one granularity family straight from CSV (R3). Validated."""
+    rel = con.sql(_typed_select(family, _csv_source(mobility_files(mobility_dir, family))))
+    validate_mobility(rel, family)
+    return rel
 
 
 def read_tourism(
     con: duckdb.DuckDBPyConnection, tourism_dir: Path, table: str
 ) -> duckdb.DuckDBPyRelation:
     """Typed relation for one tourism table. Rows under the threshold are omitted upstream."""
-    path = Path(tourism_dir) / "*" / f"{table}.csv"
-    source = f"read_csv({_quote(path)}, delim=';', all_varchar=true)"
-    below = con.sql(
-        f"SELECT count(*) FROM {source} "
-        f"WHERE TRY_CAST(visitantes AS BIGINT) IS NULL "
-        f"OR TRY_CAST(visitantes AS BIGINT) < {PROVIDER_THRESHOLD}"
-    ).fetchone()[0]
-    if below:
-        raise DataContractError(
-            f"{table}: {below} rows with visitantes missing or < {PROVIDER_THRESHOLD}"
-        )
-    return con.sql(f"""
+    files = sorted(Path(tourism_dir).glob(f"*/{table}.csv"))
+    if not files:
+        raise FileNotFoundError(f"No {table}.csv files under {tourism_dir}")
+    rel = con.sql(f"""
         SELECT
-          CAST(strptime(mes, '%Y%m') AS DATE) AS month,
+          TRY_CAST(strptime(mes, '%Y%m') AS DATE) AS month,
           * EXCLUDE ("año", mes, visitantes),
-          CAST(visitantes AS BIGINT) AS visitantes,
+          TRY_CAST(visitantes AS BIGINT) AS visitantes,
           '{PUBLISHED}' AS state
-        FROM {source}""")
-
+        FROM {_csv_source(files, delim=";")}""")
+    bad = rel.aggregate(
+        f"count(*) FILTER (WHERE month IS NULL OR visitantes IS NULL "
+        f"OR visitantes < {PROVIDER_THRESHOLD})"
+    ).fetchone()[0]
+    if bad:
+        raise DataContractError(
+            f"{table}: {bad} rows with an invalid month or visitantes < {PROVIDER_THRESHOLD}"
+        )
+    return rel
 
 
 def mobility_cache_path(settings: Settings, family: str) -> Path:
+    """Parquet file that caches one family."""
     return settings.cache_dir / "mobility" / f"{family}.parquet"
 
 
 def ingest_mobility(
     con: duckdb.DuckDBPyConnection, settings: Settings, family: str
 ) -> Path:
-    """Write one family to Parquet (sorted by day). Skipped when the cache is fresh."""
-    sources = sorted(Path(settings.mobility_dir).glob(f"*/{FAMILY_PREFIX[family]}_*_origen.csv"))
-    if not sources:
-        raise FileNotFoundError(f"No {family} CSV files under {settings.mobility_dir}")
+    """Write one family to Parquet, reading the CSVs once. Skipped when the cache is fresh."""
+    files = mobility_files(settings.mobility_dir, family)
     output = mobility_cache_path(settings, family)
-    current = fingerprint(sources)
+    current = fingerprint(files)
     if not settings.force_rebuild and is_fresh(output, current):
         logger.info("%s: cache is fresh, skipping ingest", family)
         return output
     output.parent.mkdir(parents=True, exist_ok=True)
     tmp = output.with_suffix(".tmp.parquet")
-    rel = read_mobility(con, settings.mobility_dir, family)
-    con.sql(
-        f"COPY ({rel.sql_query()} ORDER BY day) TO {_quote(tmp)} "
-        "(FORMAT parquet, COMPRESSION zstd)"
-    )
-    tmp.replace(output)
+    try:
+        con.sql(
+            f"COPY ({_typed_select(family, _csv_source(files))}) TO {quote_literal(tmp)} "
+            "(FORMAT parquet, COMPRESSION zstd)"
+        )
+        validate_mobility(con.read_parquet(str(tmp)), family)
+        tmp.replace(output)
+    finally:
+        tmp.unlink(missing_ok=True)
     write_manifest(output, current)
     logger.info("%s: wrote %s", family, output)
     return output
