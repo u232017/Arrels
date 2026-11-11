@@ -9,6 +9,7 @@ setup:
 
 data:
 	$(PY) -m pipeline.run
+	$(PY) -m pipeline.export
 
 test:
 	$(PY) -m pytest --cov=pipeline --cov-report=term-missing --cov-fail-under=80

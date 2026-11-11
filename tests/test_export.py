@@ -121,3 +121,40 @@ def test_sample_payloads_are_valid_and_synthetic():
         validate(b, "barri")
         assert_threshold(b)
     assert len(barris) == 3
+
+
+def test_write_all_writes_meta_and_one_file_per_barri(tmp_path):
+    from pipeline.export import write_all
+
+    meta, barris = sample_payloads()
+    size = write_all(tmp_path, meta, barris)
+    assert (tmp_path / "meta.json").exists()
+    assert len(list((tmp_path / "barri").glob("*.json"))) == 3
+    assert 0 < size < 5 * 1024 * 1024
+
+
+def test_write_all_refuses_counts_below_threshold(tmp_path):
+    from pipeline.export import write_all
+
+    meta, barris = sample_payloads()
+    barris[0]["months"][0]["visitors"]["value"] = 3
+    with pytest.raises(ThresholdError):
+        write_all(tmp_path, meta, barris)
+    assert not (tmp_path / "meta.json").exists()
+
+
+def test_missing_centroid_file_gives_empty_mapping(tmp_path):
+    from pipeline.export import load_centroids
+
+    assert load_centroids(tmp_path / "nope.csv") == {}
+
+
+def test_holidays_are_grouped_by_month_in_date_order(con, tmp_path):
+    from pipeline.export import _holidays_by_month
+
+    path = tmp_path / "cal.parquet"
+    con.sql(f"""COPY (SELECT * FROM (VALUES
+        (DATE '2024-12-26', true, 'Sant Esteve'), (DATE '2024-12-25', true, 'Nadal'),
+        (DATE '2024-12-27', false, NULL)) t(day, is_holiday, holiday_name))
+        TO '{path}' (FORMAT parquet)""")
+    assert _holidays_by_month(con, path) == {"2024-12": ["Nadal", "Sant Esteve"]}
