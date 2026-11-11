@@ -20,7 +20,10 @@ interface Props {
 
 export function KpiCard({ title, value, format, note }: Props) {
   const id = useId();
-  const shown = value.state === "published" && value.value !== null ? FORMATTERS[format](value.value) : "Sense dada";
+  const shown =
+    value.state === "published" && value.value !== null
+      ? FORMATTERS[format](value.value)
+      : value.state === "suppressed" ? "<15" : "Sense dada";
   return (
     <article className="kpi" aria-labelledby={id}>
       <h3 id={id} className="kpi__title">{title}</h3>

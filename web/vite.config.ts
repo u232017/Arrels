@@ -5,6 +5,7 @@ import { defineConfig } from "vite";
 export default defineConfig({
   plugins: [react()],
   base: "./",
+  server: { fs: { allow: [".."] } },
   test: {
     environment: "jsdom",
     globals: true,

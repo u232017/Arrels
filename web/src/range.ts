@@ -5,8 +5,9 @@ export function inRange(months: BarriMonth[], from: string, to: string): BarriMo
 }
 
 const mean = (xs: number[]): number => xs.reduce((a, b) => a + b, 0) / xs.length;
-const published = (vs: Value[]): number[] =>
-  vs.filter((v) => v.state === "published" && v.value !== null).map((v) => v.value as number);
+type PublishedValue = Value & { value: number };
+const isPublished = (v: Value): v is PublishedValue => v.state === "published" && v.value !== null;
+const published = (vs: Value[]): number[] => vs.filter(isPublished).map((v) => v.value);
 
 function windowOf(months: BarriMonth[]): string {
   if (months.length === 0) return "";

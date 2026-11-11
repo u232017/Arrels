@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { BarriSelector } from "./components/BarriSelector";
+import { CoverageBadge } from "./components/CoverageBadge";
 import { HomesList } from "./components/HomesList";
 import { HomesMap } from "./components/HomesMap";
 import { KpiCard } from "./components/KpiCard";
@@ -9,40 +10,60 @@ import { TimeSeries } from "./components/TimeSeries";
 import { DATA_DIR, loadBarri, loadMeta } from "./data";
 import { formatMonth } from "./format";
 import { inRange, summarise } from "./range";
-import type { Barri, Meta } from "./types";
+import type { Barri, Home, Meta } from "./types";
 
 const DEFAULT_MONTHS_SHOWN = 12;
+const NO_HOMES: Home[] = [];
+
+type Range = { from: string; to: string };
+
+/** Keep the current range if the barri has both months; otherwise show its last 12 months. */
+function fitRange(current: Range | null, months: string[]): Range | null {
+  if (months.length === 0) return null;
+  if (current && months.includes(current.from) && months.includes(current.to)) return current;
+  return { from: months[Math.max(0, months.length - DEFAULT_MONTHS_SHOWN)], to: months[months.length - 1] };
+}
+
+const isAbort = (e: unknown) => e instanceof DOMException && e.name === "AbortError";
 
 export function App({ dataDir = DATA_DIR }: { dataDir?: string }) {
   const [meta, setMeta] = useState<Meta | null>(null);
   const [code, setCode] = useState<string>("");
   const [barri, setBarri] = useState<Barri | null>(null);
-  const [range, setRange] = useState<{ from: string; to: string } | null>(null);
+  const [range, setRange] = useState<Range | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadMeta(dataDir)
+    const ctrl = new AbortController();
+    loadMeta(dataDir, ctrl.signal)
       .then((m) => { setMeta(m); setCode(m.pilots[0]?.code ?? ""); })
-      .catch((e: Error) => setError(e.message));
+      .catch((e: Error) => { if (!isAbort(e)) { setError(e.message); setLoading(false); } });
+    return () => ctrl.abort();
   }, [dataDir]);
 
   useEffect(() => {
     if (!code) return;
-    loadBarri(dataDir, code)
+    const ctrl = new AbortController();
+    let cancelled = false; // ignore late responses for a barri that is no longer selected
+    setLoading(true);
+    setError(null);
+    loadBarri(dataDir, code, ctrl.signal)
       .then((b) => {
+        if (cancelled) return;
         setBarri(b);
-        setRange((r) => {
-          if (r) return r;
-          const months = b.months.map((m) => m.month);
-          return { from: months[Math.max(0, months.length - DEFAULT_MONTHS_SHOWN)], to: months[months.length - 1] };
-        });
+        setRange((r) => fitRange(r, b.months.map((m) => m.month)));
       })
-      .catch((e: Error) => setError(e.message));
+      .catch((e: Error) => { if (!cancelled && !isAbort(e)) { setBarri(null); setError(e.message); } })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; ctrl.abort(); };
   }, [dataDir, code]);
 
   const shown = useMemo(() => (barri && range ? inRange(barri.months, range.from, range.to) : []), [barri, range]);
   const summary = useMemo(() => summarise(shown), [shown]);
-  const lastMonth = shown[shown.length - 1];
+  const lastMonth = shown.length ? shown[shown.length - 1] : undefined;
+  const yoyMonth = [...shown].reverse().find((m) => m.yoy.state === "published");
+  const baseYear = meta?.window.start.slice(0, 4) ?? "";
 
   return (
     <>
@@ -51,21 +72,26 @@ export function App({ dataDir = DATA_DIR }: { dataDir?: string }) {
         <p className="top__lead">Patrons de visitants regionals en tres barris de Barcelona, a partir de dades de mobilitat agregades.</p>
       </header>
       <main className="page">
+        {loading ? <p role="status" className="status">Carregant dades…</p> : null}
         {error ? <p role="alert" className="error">{error}</p> : null}
-        {meta && barri && range ? (
-          <>
-            <section className="controls" aria-label="Filtres">
-              <BarriSelector pilots={meta.pilots} value={code} onChange={setCode} />
+        {meta ? (
+          <section className="controls" aria-label="Filtres">
+            <BarriSelector pilots={meta.pilots} value={code} onChange={setCode} />
+            {barri && range ? (
               <MonthRange months={barri.months.map((m) => m.month)} from={range.from} to={range.to}
                           onChange={(from, to) => setRange({ from, to })} />
-            </section>
-
+            ) : null}
+          </section>
+        ) : null}
+        {meta && barri && range ? (
+          <>
             <h2 className="barri-name">{barri.name}</h2>
 
             <section className="kpis" aria-labelledby="kpis-title">
               <h2 id="kpis-title" className="visually-hidden">Indicadors</h2>
               <KpiCard title="Visitants regionals únics" value={summary.visitors} format="int" note="Mitjana mensual del període" />
-              <KpiCard title="Canvi respecte al mateix mes de 2023" value={summary.yoy} format="signedPct" note="Últim mes amb dada" />
+              <KpiCard title={`Canvi respecte al mateix mes de ${baseYear}`} value={summary.yoy} format="signedPct"
+                       note={yoyMonth ? `Mes: ${formatMonth(yoyMonth.month)}` : "Cap mes amb dada"} />
               <KpiCard title="Quota de cap de setmana" value={summary.weekendShare} format="pct" note="Viatges regionals; setmana uniforme = 28,6 %" />
               <KpiCard title="Lloguer mitjà trimestral" value={barri.context.rent} format="int" note="Pendent d'integrar" />
               <KpiCard title="Residents" value={barri.context.residents} format="int" note="Pendent d'integrar" />
@@ -75,15 +101,17 @@ export function App({ dataDir = DATA_DIR }: { dataDir?: string }) {
             <section className="homes-panel" aria-labelledby="homes-title">
               <h2 id="homes-title">On viuen els visitants · {lastMonth ? formatMonth(lastMonth.month) : ""}</h2>
               <p className="hint">Visitants únics d'un sol mes (no es poden sumar mesos).</p>
+              {lastMonth ? <CoverageBadge value={lastMonth.visitors} /> : null}
               <div className="homes-grid">
-                <HomesMap homes={lastMonth?.homes ?? []} />
-                <HomesList homes={lastMonth?.homes ?? []} />
+                <HomesMap homes={lastMonth?.homes ?? NO_HOMES} />
+                <HomesList homes={lastMonth?.homes ?? NO_HOMES} />
               </div>
             </section>
 
             <section aria-labelledby="series-title">
               <h2 id="series-title">Evolució mensual</h2>
-              <TimeSeries months={barri.months} from={range.from} to={range.to} />
+              <CoverageBadge value={summary.visitors} />
+              <TimeSeries months={barri.months} from={range.from} to={range.to} baseYear={baseYear} />
               <p className="hint">Lloguer: pendent d'integrar (sense dades encara).</p>
             </section>
           </>

@@ -41,7 +41,7 @@ test.describe("Arrels single page", () => {
   });
 
   test("controls work with the keyboard only", async ({ page }) => {
-    await app.barri.focus();
+    await page.locator("body").press("Tab");
     await expect(app.barri).toBeFocused();
     await page.keyboard.press("Tab");
     await expect(app.from).toBeFocused();

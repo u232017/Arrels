@@ -22,7 +22,7 @@ export default defineConfig({
     command: `npx vite --port ${PORT} --strictPort`,
     env: { VITE_DATA_DIR: "sample" }, // synthetic data only, never the NDA export
     url: `http://localhost:${PORT}`,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false, // never reuse a dev server that may serve the real export
     timeout: 60_000,
   },
 });

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Home } from "../types";
 
 // Free basemap without API key (OpenFreeMap). If it fails, the ranked list still works.
@@ -14,7 +14,7 @@ const located = (homes: Home[]): Located[] =>
 export function HomesMap({ homes }: { homes: Home[] }) {
   const ref = useRef<HTMLDivElement>(null);
   const [failed, setFailed] = useState(false);
-  const points = located(homes);
+  const points = useMemo(() => located(homes), [homes]);
 
   useEffect(() => {
     if (!ref.current || points.length === 0) return;
@@ -25,9 +25,13 @@ export function HomesMap({ homes }: { homes: Home[] }) {
         await import("maplibre-gl/dist/maplibre-gl.css");
         if (cancelled || !ref.current) return;
         const max = Math.max(...points.map((p) => p.visitors));
-        const m = new maplibre.Map({ container: ref.current, style: STYLE_URL, center: CENTER, zoom: ZOOM });
+        const m = new maplibre.Map({ container: ref.current, style: STYLE_URL, center: CENTER, zoom: ZOOM,
+                                     keyboard: false });
         map = m;
+        let loaded = false;
+        m.getCanvas().tabIndex = -1; // the ranked list is the keyboard-accessible view
         m.on("load", () => {
+          loaded = true;
           m.addSource("homes", {
             type: "geojson",
             data: {
@@ -45,7 +49,7 @@ export function HomesMap({ homes }: { homes: Home[] }) {
                      "circle-stroke-color": "#ffffff", "circle-stroke-width": 1 },
           });
         });
-        m.on("error", () => setFailed(true));
+        m.on("error", () => { if (!loaded) setFailed(true); }); // ignore single tile errors
       })
       .catch(() => setFailed(true));
     return () => { cancelled = true; map?.remove(); };
@@ -56,7 +60,7 @@ export function HomesMap({ homes }: { homes: Home[] }) {
   }
   return (
     <>
-      <div ref={ref} className="map" role="img" aria-label="Mapa dels municipis de residència dels visitants (mida = visitants)" />
+      <div ref={ref} className="map" role="img" aria-label="Mapa dels municipis de residència dels visitants (mida = visitants). Vegeu la llista al costat." />
       {failed ? <p className="map-fallback">Mapa no disponible en aquest navegador. Consulta la llista.</p> : null}
     </>
   );

@@ -98,3 +98,4 @@ td { font-variant-numeric: tabular-nums; }
 .error { background: var(--warn-bg); color: var(--warn-text); padding: 12px; border-radius: 8px; }
 .foot { padding-top: 24px; padding-bottom: 32px; font-size: 0.85rem; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.status { color: var(--muted); }
