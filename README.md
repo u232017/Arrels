@@ -1,17 +1,18 @@
 # Arrels — Barri Lab
 
-Arrels es un análisis neutral y basado en datos de los **visitantes regionales** de tres barris de
-Barcelona: de qué municipios vienen, cómo cambia su número respecto a 2023 y qué parte de los viajes
-se hace en fin de semana. Muestra **patrones, no causas**.
+Arrels es una web de exploración de los **visitantes regionales** de los 73 barrios de Barcelona,
+su variación respecto de 2023, los precios de vivienda y los recursos oficiales de vivienda.
 
 Equipo **Barri Lab** (201_F, UPF) · **Telefónica Mobile Data Challenge 2026 — Challenge #3 (Open
 Innovation)** · Entrega: 04/12/2026.
 
 ## Estado
 
-MVP funcionando con datos reales para tres barris piloto (D3): la Dreta de l'Eixample, Sants y Sant
-Andreu. Pendiente: integrar alquiler, población y HUT (ficheros no disponibles). Resumen, change log,
-issue log y preguntas para el mentor: [`docs/SUMMARY.md`](docs/SUMMARY.md).
+La entrada principal muestra el mapa de barrios. La movilidad real requiere ejecutar `make data`
+con las fuentes locales de Telefónica. `?demo=1` activa la movilidad simulada y `?view=detail`
+abre el visor anterior de tres barrios piloto. El alcance, los cambios y la reproducción de las
+fuentes están en [Adaptación de la web](docs/ADAPTACION_WEB.md). El histórico del piloto está en
+[Resumen de desarrollo](docs/SUMMARY.md).
 
 ## Estructura
 

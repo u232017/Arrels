@@ -11,7 +11,7 @@ test("residence map loads its worker and draws without falling back", async ({ p
   await page.route("**/tiles.openfreemap.org/**", (r) => r.abort());
   await page.route("**/tiles.openfreemap.org/styles/**", (r) => r.fulfill({ json: STYLE }));
 
-  await page.goto("/");
+  await page.goto("/?view=detail");
   const map = page.getByRole("img", { name: /mapa dels municipis/i });
   await expect(map.locator("canvas")).toBeVisible();
   await expect(map.locator("canvas")).toHaveAttribute("tabindex", "-1");

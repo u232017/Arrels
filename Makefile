@@ -11,6 +11,7 @@ setup: ## Crea .venv (Python 3.12) e instala dependencias fijadas, Python y web
 data: ## Pipeline completo (ingesta → calidad → agregados → indicadores) y export JSON para la web
 	$(PY) -m pipeline.run
 	$(PY) -m pipeline.export
+	$(PY) scripts/export_map.py
 
 test: ## Tests del pipeline con cobertura (mínimo 80 %)
 	$(PY) -m pytest --cov=pipeline --cov-report=term-missing --cov-fail-under=80

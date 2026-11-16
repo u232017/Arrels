@@ -12,7 +12,7 @@ export class ArrelsPage {
   async goto() {
     // Keep tests hermetic: no external basemap tiles.
     await this.page.route("**/tiles.openfreemap.org/**", (r) => r.abort());
-    await this.page.goto("/");
+    await this.page.goto("/?view=detail");
     await this.kpis.waitFor();
   }
 
